@@ -1,1 +1,2 @@
 ## ConnectiVita
+AI Powered application
