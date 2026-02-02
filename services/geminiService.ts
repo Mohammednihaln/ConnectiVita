@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { LifeStageUpdate, CitizenProfile, ChatMessage, SchemeAnalysisResult, AppLanguage, Scheme, DetectedProfileUpdate, FocusAreaContent, SnapshotUpdateEntry } from "../types";
+import { TRANSLATIONS } from "../translations";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -16,41 +17,76 @@ Tone Rules:
 `;
 
 export const deepClean = (obj: any, seen = new WeakSet()): any => {
+    // 1. Handle Primitives and Null
     if (obj === null || typeof obj !== 'object') {
         return obj;
     }
+
+    // 2. Handle Dates
+    if (obj instanceof Date) {
+        return obj.toISOString();
+    }
     
+    // 3. Handle DOM Nodes / Windows / Events (Common source of 'src' circular errors)
+    if (typeof Node !== 'undefined' && obj instanceof Node) return '[DOM Node]';
+    if (typeof Window !== 'undefined' && obj instanceof Window) return '[Window]';
+    if (typeof Event !== 'undefined' && obj instanceof Event) return '[Event]';
+
+    // 4. Handle Circular References
     if (seen.has(obj)) {
         return '[Circular]';
     }
     seen.add(obj);
 
+    // 5. Handle Arrays
     if (Array.isArray(obj)) {
         return obj.map(item => deepClean(item, seen));
     }
 
+    // 6. Handle Objects
     const cleaned: any = {};
     for (const key in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, key)) {
-             cleaned[key] = deepClean(obj[key], seen);
+             try {
+                // Skip internal React keys or large irrelevant objects if found
+                if (key.startsWith('_') || key === 'nativeEvent') {
+                    continue;
+                }
+                const val = obj[key];
+                // Skip functions as they don't stringify anyway but might have props
+                if (typeof val === 'function') continue;
+                
+                cleaned[key] = deepClean(val, seen);
+             } catch (e) {
+                cleaned[key] = '[Error Accessing Property]';
+             }
         }
     }
     return cleaned;
 };
 
-const safeStringifyProfile = (profile: CitizenProfile) => {
+export const safeStringifyProfile = (profile: CitizenProfile) => {
     try {
+        // Whitelist fields to ensure no DOM nodes or extraneous properties (like 'src') get included
         const cleanProfile = {
+            username: profile.username,
+            accountScope: profile.accountScope,
+            memberCount: profile.memberCount,
             primaryUser: profile.primaryUser,
             spouse: profile.spouse,
             children: profile.children,
             parents: profile.parents,
             siblings: profile.siblings,
             socialCategory: profile.socialCategory,
-            // Fallbacks/Derived
-            summaryState: profile.state || profile.primaryUser?.state,
-            summaryLivelihood: profile.livelihood || profile.primaryUser?.occupation,
-            totalMembers: profile.memberCount
+            
+            // Include derived/optional fields for full state restoration
+            state: profile.state || profile.primaryUser?.state,
+            residenceType: profile.residenceType,
+            livelihood: profile.livelihood,
+            incomeStability: profile.incomeStability,
+            financialPressure: profile.financialPressure,
+            isPregnant: profile.isPregnant,
+            childrenCounts: profile.childrenCounts
         };
 
         return JSON.stringify(deepClean(cleanProfile));
@@ -92,9 +128,6 @@ export const detectProfileChanges = async (
             }
         `;
 
-        // IMPORTANT: Do NOT use responseSchema here. 
-        // The CitizenProfile object is too complex/nested for strict API schema validation rules (requires all objects to have properties).
-        // We rely on responseMimeType: "application/json" and the prompt's schema description.
         const response = await ai.models.generateContent({
             model: "gemini-3-flash-preview",
             contents: prompt,
@@ -157,7 +190,6 @@ export const analyzeLifeStageChange = async (
       ${getToneInstructions(language)}
     `;
 
-    // IMPORTANT: No strict schema for this function either, to allow flexibility in profileUpdates.
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -181,6 +213,81 @@ export const analyzeLifeStageChange = async (
       journeySummary: "Profile updated."
     };
   }
+};
+
+// Generates fallback schemes if AI returns empty or fails
+const generateFallbackSchemes = (profile: CitizenProfile, language: AppLanguage): Scheme[] => {
+    // @ts-ignore
+    const t = TRANSLATIONS[language]?.schemes?.defaults || TRANSLATIONS['English'].schemes.defaults;
+    const schemes: Scheme[] = [];
+
+    // 1. General Welfare (Always for Self)
+    schemes.push({
+        name: t.generalTitle,
+        description: t.generalDesc,
+        eligibilityReason: t.reason,
+        benefits: "Health & Security Coverage",
+        beneficiary: "You",
+        beneficiaryType: "SELF",
+        category: "Other",
+        probability: "Likely applicable",
+        applicationProcess: ["Contact local municipal office", "Submit ID proof"],
+        requiredDocuments: ["Aadhaar", "Address Proof"],
+        applicationMode: "Offline"
+    });
+
+    // 2. Child Support (If children exist)
+    if (profile.children && profile.children.length > 0) {
+        schemes.push({
+            name: t.childTitle,
+            description: t.childDesc,
+            eligibilityReason: t.reason,
+            benefits: "Education & Nutrition",
+            beneficiary: "Children",
+            beneficiaryType: "CHILD",
+            category: "Education",
+            probability: "Likely applicable",
+            applicationProcess: ["Visit nearest Anganwadi or School", "Register child"],
+            requiredDocuments: ["Birth Certificate", "Aadhaar"],
+            applicationMode: "Assisted"
+        });
+    }
+
+    // 3. Spouse / Maternal (If spouse exists)
+    if (profile.spouse && (profile.spouse.age || profile.spouse.gender)) {
+        schemes.push({
+            name: t.maternalTitle,
+            description: t.maternalDesc,
+            eligibilityReason: t.reason,
+            benefits: "Health & Support",
+            beneficiary: "Spouse",
+            beneficiaryType: "SPOUSE",
+            category: "Health",
+            probability: "May apply",
+            applicationProcess: ["Visit Primary Health Centre", "Consult ANM"],
+            requiredDocuments: ["ID Proof", "Bank Account"],
+            applicationMode: "Assisted"
+        });
+    }
+
+    // 4. Parents / Senior (If parents exist)
+    if (profile.parents && profile.parents.length > 0) {
+        schemes.push({
+            name: t.seniorTitle,
+            description: t.seniorDesc,
+            eligibilityReason: t.reason,
+            benefits: "Pension & Care",
+            beneficiary: "Parents",
+            beneficiaryType: "PARENT",
+            category: "Pension",
+            probability: "Likely applicable",
+            applicationProcess: ["Apply at Social Welfare Office", "Verify Age"],
+            requiredDocuments: ["Age Proof", "Aadhaar"],
+            applicationMode: "Offline"
+        });
+    }
+
+    return schemes;
 };
 
 export const getEligibleSchemes = async (
@@ -208,18 +315,37 @@ export const getEligibleSchemes = async (
             - Life Stage: ${currentStage}
             - Language: ${language}
             
-            Task: Identify government schemes (India context) relevant to this family.
+            Task: Identify government schemes (India context) relevant to EACH member of this family.
             
-            Rules:
-            1. Use the provided profile data strictly (Age, Gender, Income, Caste, Employment, State).
-            2. EXCLUDE government employees unless specific schemes apply to them.
-            3. "beneficiary" field MUST specify the Member Name/Role AND Age (e.g. "Mother (62)", "You (35)").
+            ELIGIBILITY LOGIC LAYERS:
+            1. LAYER 1 (Likely Applicable): Strong match with Life Stage, Age, or Category. Label as 'Likely applicable'.
+            2. LAYER 2 (Conditionally Applicable): Plausible match but specific criteria (income, exact caste) unknown. Label as 'Requires verification'.
+            
+            CRITICAL RULES (FALLBACK SAFETY):
+            1. If strict eligibility checks fail, you MUST return schemes based on the Life Stage (Layer 1 or 2).
+            2. Example: If pregnant, ALWAYS show PMMVY/Janani Suraksha (Likely applicable) even if specific income data is missing.
+            3. Example: If elderly (>60), ALWAYS show IGNOAPS (Pension) as a suggestion.
+            4. Example: If child (6-14), ALWAYS show Right to Education related benefits.
+            5. NEVER return an empty list if the profile has family members. Always infer relevance from age/gender/life stage.
+            6. Do NOT hide schemes due to missing data. Use 'Requires verification' or 'May apply'.
+            
+            Content Rules:
+            1. Use the provided profile data (Age, Gender, Income, Caste, Employment, State).
+            2. "beneficiary" field: Display Name/Role AND Age (e.g. "Mother (62)", "You (35)").
+            3. "beneficiaryType" field: MUST be one of 'SELF' (primary user), 'SPOUSE', 'CHILD', 'PARENT', 'SIBLING', or 'FAMILY' (general household schemes).
             4. Return 'eligible' with a list of schemes.
-            5. Do NOT make up schemes. Use real, well-known schemes (PMMVY, Janani Suraksha, PM KISAN, PM Vishwakarma, Ayushman Bharat, etc).
-            6. LIMIT: Maximum 3-4 schemes per beneficiary.
-            7. "eligibilityReason": Plain language explanation starting with "Suggested because...".
+            5. Do NOT make up schemes. Use real, well-known schemes.
+            6. LIMIT: Maximum 3-4 schemes per family member.
+            7. "eligibilityReason": Plain language explanation. E.g. "Shown because you have a child of school age."
             8. Translate Name, Description, Reason, Benefits, Beneficiary into ${language}.
             9. "category" MUST be one of: 'Health', 'Education', 'Pension', 'Livelihood', 'Housing', 'Other'.
+            10. "applicationProcess": Array of 3-5 short, numbered steps (strings) in ${language}. Simple language.
+            11. "requiredDocuments": Array of strings (e.g. 'Aadhaar', 'Bank Passbook') in ${language}.
+            12. "applicationMode": One of 'Offline', 'Online', 'Assisted'.
+            13. "probability": One of 'Likely applicable', 'May apply', 'Requires verification'.
+                - 'Likely applicable': Strong match (Age + Gender + Life Stage match).
+                - 'May apply': Good match but loose criteria.
+                - 'Requires verification': Plausible but depends on specific doc/income not in profile.
             
             Output JSON:
             {
@@ -233,7 +359,12 @@ export const getEligibleSchemes = async (
                        "eligibilityReason": "Suggested because...", 
                        "benefits": "", 
                        "beneficiary": "Mother (62)",
-                       "category": "Health"
+                       "beneficiaryType": "PARENT", 
+                       "category": "Health",
+                       "probability": "Likely applicable",
+                       "applicationProcess": ["Step 1", "Step 2"],
+                       "requiredDocuments": ["Doc 1", "Doc 2"],
+                       "applicationMode": "Offline"
                    } 
                ]
             }
@@ -260,7 +391,12 @@ export const getEligibleSchemes = async (
                                     eligibilityReason: { type: Type.STRING },
                                     benefits: { type: Type.STRING },
                                     beneficiary: { type: Type.STRING },
-                                    category: { type: Type.STRING, enum: ['Health', 'Education', 'Pension', 'Livelihood', 'Housing', 'Other'] }
+                                    beneficiaryType: { type: Type.STRING, enum: ['SELF', 'SPOUSE', 'CHILD', 'PARENT', 'SIBLING', 'FAMILY'] },
+                                    category: { type: Type.STRING, enum: ['Health', 'Education', 'Pension', 'Livelihood', 'Housing', 'Other'] },
+                                    probability: { type: Type.STRING, enum: ['Likely applicable', 'May apply', 'Requires verification'] },
+                                    applicationProcess: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                    requiredDocuments: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                    applicationMode: { type: Type.STRING, enum: ['Offline', 'Online', 'Assisted'] }
                                 }
                             }
                         }
@@ -271,11 +407,35 @@ export const getEligibleSchemes = async (
 
         const text = response.text;
         if (!text) throw new Error("No response from AI");
-        return JSON.parse(text) as SchemeAnalysisResult;
+        const result = JSON.parse(text) as SchemeAnalysisResult;
+
+        // ABSOLUTE RENDER GUARANTEE:
+        // If AI returns NO schemes, or very few, MERGE with deterministic fallbacks.
+        const fallbackSchemes = generateFallbackSchemes(profile, language);
+        
+        if (!result.schemes || result.schemes.length === 0) {
+            result.schemes = fallbackSchemes;
+            result.status = 'eligible';
+        } else {
+            // Check coverage: Ensure SELF, CHILD, etc. are represented if they exist in profile
+            // This is a simple merge to ensure key members aren't left out.
+            const existingTypes = new Set(result.schemes.map(s => s.beneficiaryType));
+            fallbackSchemes.forEach(fb => {
+                if (!existingTypes.has(fb.beneficiaryType)) {
+                    result.schemes?.push(fb);
+                }
+            });
+        }
+
+        return result;
 
     } catch (e) {
         console.error("Scheme Check Error", e);
-        return { status: 'no_schemes_found' };
+        // Fallback on error too
+        return { 
+            status: 'eligible', 
+            schemes: generateFallbackSchemes(profile, language) 
+        };
     }
 }
 
@@ -383,31 +543,13 @@ export const explainNeed = async (currentStage: string, need: string, language: 
     }
 }
 
-export const generateChatTitle = async (firstMessage: string, language: AppLanguage): Promise<string> => {
-    try {
-        const prompt = `
-            Generate a short, friendly title (max 4 words) for a chat that starts with: "${firstMessage}".
-            Language: ${language}.
-            Do not use quotes.
-        `;
-        const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: prompt
-        });
-        return response.text?.trim() || "New Conversation";
-    } catch (e) {
-        return "Conversation";
-    }
-}
-
 export const getFamilyContextChatResponse = async (
     profile: CitizenProfile,
     currentStage: string,
-    needs: string[],
     history: ChatMessage[],
     lastUserMessage: string,
     language: AppLanguage,
-    schemes?: Scheme[],
+    schemes?: SchemeAnalysisResult | null,
     updateHistory?: SnapshotUpdateEntry[]
 ): Promise<string> => {
     try {
@@ -415,9 +557,9 @@ export const getFamilyContextChatResponse = async (
             `${msg.role === 'user' ? 'User' : 'ConnectiVita'}: ${msg.content}`
          ).join('\n');
 
-         const schemeContext = schemes && schemes.length > 0 
-            ? `KNOWN ELIGIBLE SCHEMES: ${JSON.stringify(deepClean(schemes))}` 
-            : "No specific schemes checked yet. Use general knowledge based on profile.";
+         const schemeContext = schemes && schemes.schemes && schemes.schemes.length > 0 
+            ? `KNOWN ELIGIBLE SCHEMES: ${JSON.stringify(deepClean(schemes.schemes))}` 
+            : "No specific schemes checked yet. Encourage user to visit Schemes tab.";
 
          // Summarize recent updates
          const recentUpdates = updateHistory && updateHistory.length > 0
@@ -441,13 +583,16 @@ export const getFamilyContextChatResponse = async (
             
             USER QUESTION: "${lastUserMessage}"
 
-            INSTRUCTIONS:
-            1. Answer the user's question with a calm, friendly tone.
-            2. If specific schemes are listed in CONTEXT, use them to answer questions about eligibility. Explain WHY they are eligible (e.g. "Because your mother is 62 years old...").
-            3. If no schemes are listed, give general advice but suggest they visit the "Schemes" tab for a personalized check.
-            4. Be non-authoritative. Use phrases like "You might be eligible for...", "This could help with...".
-            5. Keep answers concise, simple and easy to read.
-            6. LANGUAGE: Respond ONLY in ${language}.
+            GUIDELINES:
+            1. **Role**: You are a GUIDE, not an AUTHORITY.
+            2. **Tone**: Calm, respectful, reassuring, simple spoken language.
+            3. **Context-Aware**: Explicitly mention family members if relevant (e.g. "Since your mother is 62...").
+            4. **Schemes**: If schemes are in context, explain *why* they might be eligible. Use phrases like "Based on...", "You may be eligible for...". NEVER guarantee eligibility.
+            5. **Restrictions**: 
+               - DO NOT ask for documents.
+               - DO NOT give medical or legal advice.
+               - DO NOT promise specific outcomes.
+            6. **Output**: Respond ONLY in ${language}. Keep it concise.
         `;
 
         const response = await ai.models.generateContent({
@@ -456,7 +601,26 @@ export const getFamilyContextChatResponse = async (
         });
         return response.text || "I am here to help.";
     } catch (e) {
-        return "System offline.";
+        console.error("Chat Error", e);
+        return "I'm having trouble connecting right now. Please try again later.";
+    }
+}
+
+export const generateChatTitle = async (message: string, language: AppLanguage): Promise<string> => {
+    try {
+        const prompt = `
+            Summarize this user message into a very short chat title (max 4 words).
+            Message: "${message}"
+            Language: ${language}
+            Output: Title only.
+        `;
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt
+        });
+        return (response.text || "New Chat").replace(/"/g, '').trim();
+    } catch (e) {
+        return "New Chat";
     }
 }
 

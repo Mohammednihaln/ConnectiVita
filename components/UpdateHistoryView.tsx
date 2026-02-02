@@ -1,118 +1,97 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Trash2, Calendar, AlertTriangle, Loader2, MessageSquare } from 'lucide-react';
 import { SnapshotUpdateEntry } from '../types';
+import { ArrowLeft, Trash2, Calendar, RefreshCcw, AlertTriangle, MessageSquareQuote } from 'lucide-react';
 
 interface Props {
-  entries: SnapshotUpdateEntry[];
-  onBack: () => void;
-  onDelete: (id: string) => Promise<void>;
-  t: any;
+    entries: SnapshotUpdateEntry[];
+    onBack: () => void;
+    onDelete: (id: string) => void;
 }
 
-export const UpdateHistoryView: React.FC<Props> = ({ entries, onBack, onDelete, t }) => {
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+export const UpdateHistoryView: React.FC<Props> = ({ entries, onBack, onDelete }) => {
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // Sort: Newest first
-  const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
+    // Sort entries descending by timestamp
+    const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
 
-  const handleDeleteClick = (id: string) => {
-    setDeletingId(id);
-  };
-
-  const confirmDelete = async () => {
-    if (!deletingId) return;
-    setIsProcessing(true);
-    await onDelete(deletingId);
-    setIsProcessing(false);
-    setDeletingId(null);
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <header className="bg-white/90 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/60 px-6 py-5 flex items-center gap-4 shadow-sm">
-        <button 
-          onClick={onBack}
-          className="w-12 h-12 flex items-center justify-center text-slate-500 hover:bg-slate-100 rounded-2xl transition-colors border border-transparent hover:border-slate-200"
-        >
-          <ArrowLeft size={24} />
-        </button>
-        <div>
-           <h1 className="font-extrabold text-slate-900 text-xl leading-tight">{t.chat.history}</h1>
-           <p className="text-slate-500 text-xs font-bold uppercase tracking-wide">Your inputs & corrections</p>
-        </div>
-      </header>
-
-      <main className="flex-1 max-w-2xl mx-auto w-full p-6 relative">
-        <div className="space-y-4">
-            {sortedEntries.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                    <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                        <MessageSquare size={32} />
-                    </div>
-                    <p className="font-medium">No manual updates recorded yet.</p>
+    return (
+        <div className="min-h-screen bg-stone-50 pb-20 animate-in fade-in slide-in-from-right">
+            <header className="bg-white sticky top-0 z-20 border-b border-stone-200 px-4 py-4 flex items-center gap-4 shadow-sm">
+                <button 
+                    onClick={onBack}
+                    className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition"
+                >
+                    <ArrowLeft size={24} />
+                </button>
+                <div>
+                    <h1 className="font-bold text-stone-800 text-lg leading-none">Update History</h1>
+                    <p className="text-stone-400 text-xs mt-1">A record of what you told us.</p>
                 </div>
-            ) : (
-                sortedEntries.map((entry) => (
-                    <div key={entry.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-4 group hover:shadow-md transition-all">
-                        <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">
-                                <Calendar size={12} />
-                                {entry.date}
+            </header>
+
+            <main className="max-w-2xl mx-auto p-5 space-y-4">
+                {sortedEntries.length === 0 ? (
+                    <div className="text-center py-20 text-stone-400">
+                        <RefreshCcw size={48} className="mx-auto mb-4 opacity-50" />
+                        <p>No updates recorded yet.</p>
+                    </div>
+                ) : (
+                    sortedEntries.map((entry) => (
+                        <div key={entry.id} className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-center gap-2 text-xs font-bold text-stone-400 uppercase tracking-wider">
+                                    <Calendar size={14} />
+                                    {entry.date}
+                                </div>
+                                <button 
+                                    onClick={() => setConfirmDeleteId(entry.id)}
+                                    className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Delete update"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
-                            <button 
-                                onClick={() => handleDeleteClick(entry.id)}
-                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                                title="Delete Update"
-                            >
-                                <Trash2 size={18} />
-                            </button>
+                            
+                            <div className="flex gap-4">
+                                <div className="mt-1 text-teal-500 opacity-60 shrink-0">
+                                    <MessageSquareQuote size={24} />
+                                </div>
+                                <p className="text-stone-800 font-medium text-xl leading-relaxed italic">
+                                    "{entry.user_input}"
+                                </p>
+                            </div>
+
+                            {/* Delete Confirmation Overlay */}
+                            {confirmDeleteId === entry.id && (
+                                <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+                                    <div className="w-12 h-12 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-3">
+                                        <AlertTriangle size={24} />
+                                    </div>
+                                    <h4 className="font-bold text-stone-800 mb-2">Remove this update?</h4>
+                                    <p className="text-xs text-stone-500 mb-6 max-w-[220px] leading-relaxed">
+                                        This update affects your family snapshot. Are you sure you want to remove it?
+                                    </p>
+                                    <div className="flex gap-3 w-full max-w-xs">
+                                        <button 
+                                            onClick={() => setConfirmDeleteId(null)}
+                                            className="flex-1 py-3 rounded-xl border border-stone-200 text-stone-600 font-bold text-xs hover:bg-stone-50"
+                                        >
+                                            Keep It
+                                        </button>
+                                        <button 
+                                            onClick={() => onDelete(entry.id)}
+                                            className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold text-xs shadow-md hover:bg-red-600"
+                                        >
+                                            Yes, Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-
-                        <div className="pl-2 border-l-2 border-indigo-100">
-                             <p className="text-slate-800 text-lg font-medium leading-relaxed font-serif italic">
-                                "{entry.user_input}"
-                             </p>
-                        </div>
-                    </div>
-                ))
-            )}
+                    ))
+                )}
+            </main>
         </div>
-      </main>
-
-      {/* Delete Confirmation Modal */}
-      {deletingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-white animate-in zoom-in-95">
-                <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6 mx-auto">
-                    {isProcessing ? <Loader2 className="animate-spin" size={32}/> : <AlertTriangle size={32} />}
-                </div>
-                
-                <h3 className="text-2xl font-extrabold text-slate-900 mb-3 text-center">Remove this update?</h3>
-                <p className="text-slate-500 mb-8 font-medium text-center leading-relaxed">
-                    This update affects your family snapshot. Removing it will trigger a recalculation of your life stage and focus areas.
-                </p>
-
-                <div className="flex gap-3">
-                    <button 
-                        onClick={() => setDeletingId(null)} 
-                        disabled={isProcessing}
-                        className="flex-1 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors"
-                    >
-                        {t.common.cancel}
-                    </button>
-                    <button 
-                        onClick={confirmDelete}
-                        disabled={isProcessing}
-                        className="flex-1 bg-rose-500 text-white py-4 rounded-2xl font-bold shadow-xl shadow-rose-500/30 hover:bg-rose-600 transition-colors flex items-center justify-center gap-2"
-                    >
-                        {isProcessing ? t.common.processing : t.settings.yesClear}
-                    </button>
-                </div>
-            </div>
-        </div>
-      )}
-    </div>
-  );
+    );
 };

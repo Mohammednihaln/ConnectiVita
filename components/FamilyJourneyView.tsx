@@ -1,100 +1,92 @@
 
 import React from 'react';
-import { ArrowLeft, Calendar, Info, MapPin } from 'lucide-react';
-import { LifeJourneyEntry } from '../types';
+import { ArrowLeft, GitCommit, Info, Calendar, Map, Flag } from 'lucide-react';
+import { SnapshotUpdateEntry } from '../types';
 
 interface Props {
-  entries: LifeJourneyEntry[];
+  entries: SnapshotUpdateEntry[];
   onBack: () => void;
-  t: any;
 }
 
-export const FamilyJourneyView: React.FC<Props> = ({ entries, onBack, t }) => {
-  // Sort oldest to newest to calculate ranges
-  const chronologicalEntries = [...entries].sort((a, b) => a.timestamp - b.timestamp);
-
-  // Helper to format date ranges
-  const getRange = (index: number) => {
-    const current = chronologicalEntries[index];
-    const next = chronologicalEntries[index + 1];
-    
-    // Fallback if date string is weird, though usually standardized
-    const start = current.date; 
-    const end = next ? next.date : t.home.now;
-    
-    return `${start} — ${end}`;
-  };
-
-  // Reverse for display (Newest at top)
-  const displayEntries = chronologicalEntries.map((entry, idx) => ({
-      ...entry,
-      dateRange: getRange(idx)
-  })).reverse();
+export const FamilyJourneyView: React.FC<Props> = ({ entries, onBack }) => {
+  // Sort descending by time (Newest on top)
+  const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <header className="bg-white/90 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/60 px-6 py-5 flex items-center gap-4 shadow-sm">
+    <div className="min-h-screen bg-stone-50 flex flex-col animate-in fade-in slide-in-from-right">
+      <header className="bg-white sticky top-0 z-20 border-b border-stone-200 px-4 py-4 flex items-center gap-4 shadow-sm">
         <button 
           onClick={onBack}
-          className="w-12 h-12 flex items-center justify-center text-slate-500 hover:bg-slate-100 rounded-2xl transition-colors border border-transparent hover:border-slate-200"
+          className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition"
         >
           <ArrowLeft size={24} />
         </button>
         <div>
-           <h1 className="font-extrabold text-slate-900 text-xl leading-tight">{t.home.viewJourney}</h1>
-           <p className="text-slate-500 text-xs font-bold uppercase tracking-wide">A story of your family so far</p>
+           <h1 className="font-bold text-stone-800 text-lg leading-none">Your Family’s Life Journey</h1>
+           <p className="text-stone-400 text-xs mt-1">A story of how your family has grown and changed.</p>
         </div>
       </header>
 
-      <main className="flex-1 max-w-2xl mx-auto w-full p-8 relative">
+      <main className="flex-1 max-w-2xl mx-auto w-full p-6 relative">
          {/* Vertical Timeline Line */}
-         <div className="absolute left-8 top-10 bottom-0 w-0.5 bg-indigo-100"></div>
+         <div className="absolute left-9 top-8 bottom-8 w-0.5 bg-gradient-to-b from-teal-200 via-stone-200 to-stone-100"></div>
 
-         <div className="space-y-16 pl-8">
-            {displayEntries.length === 0 ? (
-                <div className="p-10 bg-white rounded-[2.5rem] border border-slate-100 text-slate-400 text-base font-medium text-center shadow-lg shadow-slate-100">
-                    No journey history recorded yet. Life updates will appear here.
+         <div className="space-y-12 pb-12">
+            {sortedEntries.length === 0 ? (
+                <div className="flex flex-col items-center justify-center pt-20 text-center space-y-4 text-stone-400">
+                    <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center">
+                        <Map size={32} className="opacity-50" />
+                    </div>
+                    <p className="max-w-xs text-sm">
+                        As you share updates about your life, your family's journey map will be built here.
+                    </p>
                 </div>
             ) : (
-                displayEntries.map((entry, idx) => (
-                    <div key={entry.id} className="relative animate-in slide-in-from-bottom-8 duration-700" style={{animationDelay: `${idx * 100}ms`}}>
-                        
-                        {/* Timeline Node */}
-                        <div className="absolute -left-[41px] top-0 w-5 h-5 bg-white border-4 border-indigo-600 rounded-full z-10"></div>
+                <>
+                    {/* Journey Entries */}
+                    {sortedEntries.map((entry, idx) => (
+                        <div key={entry.id} className="relative flex gap-6 animate-in slide-in-from-bottom-4 duration-500" style={{animationDelay: `${idx * 100}ms`}}>
+                            
+                            {/* Dot / Marker */}
+                            <div className="relative z-10 shrink-0 mt-1">
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center border-4 border-stone-50 shadow-sm ${idx === 0 ? 'bg-teal-500 text-white' : 'bg-stone-200 text-stone-500'}`}>
+                                    {idx === 0 ? <Flag size={12} fill="currentColor" /> : <div className="w-2 h-2 bg-stone-400 rounded-full" />}
+                                </div>
+                            </div>
 
-                        {/* Date Range Label */}
-                        <div className="flex items-center gap-2 text-xs font-black text-indigo-400 uppercase tracking-widest mb-3">
-                            <Calendar size={14} />
-                            {entry.dateRange}
+                            {/* Content Card */}
+                            <div className="flex-1">
+                                <div className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                    <Calendar size={12} />
+                                    {entry.date}
+                                </div>
+                                <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm hover:shadow-md transition-all duration-300">
+                                    <div className="mb-3">
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${idx === 0 ? 'bg-teal-50 text-teal-700 border-teal-100' : 'bg-stone-50 text-stone-600 border-stone-100'}`}>
+                                            {entry.life_stage || "Life Transition"}
+                                        </span>
+                                    </div>
+                                    <p className="text-stone-800 font-medium text-lg leading-relaxed">
+                                        {entry.change_summary}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
+                    ))}
 
-                        {/* Content Card */}
-                        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
-                             {/* Decorative Background Blob */}
-                             <div className="absolute -right-10 -top-10 w-32 h-32 bg-slate-50 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
-
-                            {/* Life Stage Title */}
-                            <h2 className="text-2xl font-extrabold text-slate-900 mb-4 relative z-10 leading-tight">
-                                {entry.lifeStagesAfter && entry.lifeStagesAfter.length > 0 
-                                    ? entry.lifeStagesAfter[0] 
-                                    : "Life Update"}
-                            </h2>
-
-                            {/* System Interpretation (Summary) */}
-                            <p className="text-slate-600 font-medium text-lg leading-relaxed relative z-10">
-                                {entry.summary}
-                            </p>
+                    {/* Start Node */}
+                    <div className="relative flex gap-6 opacity-50">
+                        <div className="relative z-10 shrink-0 mt-1">
+                             <div className="w-7 h-7 bg-stone-100 rounded-full flex items-center justify-center border-4 border-stone-50">
+                                <div className="w-1.5 h-1.5 bg-stone-300 rounded-full" />
+                             </div>
+                        </div>
+                        <div className="flex-1 pt-1.5">
+                            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Start of Journey</p>
                         </div>
                     </div>
-                ))
+                </>
             )}
-         </div>
-
-         <div className="mt-24 text-center pb-10">
-             <div className="inline-flex items-center gap-2 text-slate-400 text-xs font-bold bg-white px-5 py-3 rounded-full border border-slate-100 shadow-sm">
-                 <Info size={14} className="text-indigo-400" />
-                 Generated securely by ConnectiVita
-             </div>
          </div>
       </main>
     </div>
