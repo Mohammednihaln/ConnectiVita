@@ -13,56 +13,90 @@ export interface CitizenSettings {
   isPaused: boolean;
   lastPausedAt?: number;
   language: AppLanguage;
+  consentGiven?: boolean;
 }
 
 // -- Detailed Family Structures --
 
 export interface FamilyMember {
-  age?: number; // Age or age range
-  gender?: 'Male' | 'Female' | 'Other';
-  disability?: boolean;
+  age?: string | number; // Updated to allow ranges like "18-25"
+  gender?: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
+  disability?: string; // 'Yes', 'No', 'Prefer not to say'
+  
+  // Education & Qualification
+  qualification?: string; // "10th grade", "Diploma", etc.
+  otherQualification?: string; // If 'Other' is selected
+
+  // Standardized Status & Education for ALL members
+  workingStatus?: 'Student' | 'Working' | 'Not working' | 'Homemaker' | 'Retired';
+  studentLevel?: 'School' | 'College' | 'Other';
+  schoolGrade?: string;
+  collegeCourse?: string;
+  collegeYear?: string;
+  otherStudy?: string;
 }
 
 export interface PrimaryUser extends FamilyMember {
   state?: string;
   residenceType?: 'Urban' | 'Rural';
-  maritalStatus?: 'Single' | 'Married' | 'Widowed' | 'Divorced';
-  occupation?: string;
+  maritalStatus?: 'Single' | 'Married' | 'Widowed' | 'Divorced' | 'Never married';
+  occupation?: string; // Kept for legacy compatibility
+  employmentStatus?: 'Student' | 'Working' | 'Not working' | 'Homemaker'; // Legacy field, mapped to workingStatus in logic
+  employmentSector?: 'Government' | 'Private' | 'Self-employed';
+  governmentRole?: string;
+  governmentRoleDescription?: string;
   incomeRange?: string;
+  isPregnant?: boolean;
 }
 
 export interface Spouse extends FamilyMember {
-  workingStatus?: 'Working' | 'Homemaker' | 'Unemployed';
-  sector?: string;
+  isAlive?: boolean;
+  // workingStatus inherited from FamilyMember
+  employmentSector?: 'Government' | 'Private' | 'Self-employed';
+  governmentRole?: string;
+  governmentRoleDescription?: string;
   incomeRange?: string;
   isPregnant?: boolean;
 }
 
 export interface Child extends FamilyMember {
   id: string;
-  studentStatus?: boolean;
-  educationLevel?: string;
+  isStudent?: boolean; // Legacy
+  educationLevel?: string; // Legacy
+  // New standardized fields inherited from FamilyMember
 }
 
 export interface Parent extends FamilyMember {
-  relation: 'Father' | 'Mother';
-  workingStatus?: 'Working' | 'Retired' | 'Dependent';
-  sector?: string;
+  relation: 'Father' | 'Mother' | 'Parent'; 
+  isAlive?: boolean;
+  // workingStatus inherited
+  employmentSector?: 'Government' | 'Private' | 'Self-employed';
+  governmentRole?: string;
+  governmentRoleDescription?: string;
   incomeRange?: string;
+  isPregnant?: boolean;
 }
 
 export interface Sibling extends FamilyMember {
   id: string;
   maritalStatus?: 'Married' | 'Unmarried';
-  workingStatus?: 'Working' | 'Student' | 'Unemployed';
-  sector?: string; // or education if student
+  isStudent?: boolean; // Legacy
+  isWorking?: boolean; // Legacy
+  // workingStatus inherited
+  
+  educationLevel?: string; // Legacy
+  employmentSector?: 'Government' | 'Private' | 'Self-employed';
+  governmentRole?: string;
+  governmentRoleDescription?: string;
   incomeRange?: string;
+  isPregnant?: boolean;
 }
 
 export interface CitizenProfile {
   username?: string;
+  accountScope?: 'individual' | 'family';
   
-  // High-level summary (kept for backward compat or quick stats)
+  // High-level summary
   memberCount: number;
   
   // Detailed Demographics
@@ -75,19 +109,19 @@ export interface CitizenProfile {
   // Community / Social
   socialCategory?: string; // SC / ST / OBC / General / Minority / ...
 
-  // Deprecated / Derived fields (kept optional to avoid breaking old logic immediately)
-  isPregnant?: boolean; // Derived from spouse or primary user if female
+  // Deprecated / Derived fields
+  isPregnant?: boolean;
   childrenCounts?: {
     age0to1: number;
     age1to6: number;
     age6to14: number;
     age14to18: number;
   };
-  livelihood?: string; // Derived from primary user occupation
+  livelihood?: string;
   incomeStability?: 'steady' | 'variable';
   financialPressure?: 'manageable' | 'stressful';
-  state?: string; // duplicate of primaryUser.state
-  residenceType?: 'rural' | 'urban'; // duplicate
+  state?: string;
+  residenceType?: 'rural' | 'urban';
 }
 
 export interface Scheme {
@@ -95,7 +129,8 @@ export interface Scheme {
   description: string;
   eligibilityReason: string;
   benefits: string;
-  beneficiary: string; // e.g., "Mother", "Child (0-6)", "Household"
+  beneficiary: string;
+  category: 'Health' | 'Education' | 'Pension' | 'Livelihood' | 'Housing' | 'Other';
 }
 
 export interface SchemeAnalysisResult {
@@ -105,13 +140,28 @@ export interface SchemeAnalysisResult {
   missingFieldQuestion?: string;
 }
 
+export interface FocusAreaContent {
+    title: string;
+    shortDescription: string;
+    whyItMatters: string;
+}
+
 export interface LifeStageUpdate {
   currentStage: string;
+  previousStage?: string; // NEW: For Visual Timeline
   nextStagePrediction: string;
   immediateNeeds: string[];
   explanation: string;
-  journeySummary?: string; // For the timeline history
-  profileUpdates?: Partial<CitizenProfile>; // Extracted updates for the profile
+  journeySummary?: string;
+  profileUpdates?: Partial<CitizenProfile>;
+  activeStages?: string[]; // E.g. ["Pregnancy", "School Age", "Senior Citizen"]
+  schemeIndicators?: string[]; // E.g. ["Maternal health support may apply"]
+  focusAreas?: {
+      health: FocusAreaContent;
+      education: FocusAreaContent;
+      livelihood: FocusAreaContent;
+      support: FocusAreaContent;
+  };
 }
 
 export interface LifeJourneyEntry {
@@ -124,14 +174,27 @@ export interface LifeJourneyEntry {
   timestamp: number;
 }
 
+export interface DetectedChange {
+  field: string;
+  oldValue: string;
+  newValue: string;
+  affectedMember: string;
+}
+
+export interface DetectedProfileUpdate {
+  summary: string;
+  changes: DetectedChange[];
+  newProfileState: CitizenProfile;
+}
+
 export interface SnapshotUpdateEntry {
   id: string;
   date: string;
   user_input: string;
-  interpreted_change: string;
-  affected_life_stages: string[];
-  linked_journey_entry_id: string;
-  source: 'user_update' | 'system_inference';
+  change_summary: string;
+  changes_detailed: DetectedChange[];
+  previous_profile_state: string; // JSON stringified for safe storage
+  life_stage?: string; // NEW: To track stage history
   timestamp: number;
 }
 
@@ -143,7 +206,7 @@ export interface Household {
   riskLevel: RiskLevel;
   lastVisit: string;
   notes: string;
-  flagReason?: string; // Why is this flagged for the worker?
+  flagReason?: string; 
 }
 
 export interface ChatMessage {

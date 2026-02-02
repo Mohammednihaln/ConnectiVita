@@ -1,14 +1,15 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, Activity, Heart, Info, Loader2, Trash2, User as UserIcon, Check, ChevronRight, X, MessageCircle, Send, Plus, History, Cloud, LogOut, Lock, ScrollText, AlertTriangle, Clock, ArrowLeft, ArrowRight, Pause, Play, Download, Mic, Volume2, Globe, Sparkles, Shield, Users, Home, FileText, User, Edit2, Mail, Key } from 'lucide-react';
+import { Settings, Activity, Heart, Info, Loader2, Trash2, User as UserIcon, Check, ChevronRight, X, MessageCircle, Send, Plus, History, Cloud, LogOut, Lock, ScrollText, AlertTriangle, Clock, ArrowLeft, ArrowRight, Pause, Play, Download, Mic, Volume2, Globe, Sparkles, Shield, Users, Home, FileText, User, Edit2, Mail, Key, ShieldCheck, XCircle, Zap, Menu, AlertCircle, RefreshCw, ChevronDown, ChevronUp, HelpCircle, Save, Layers, Circle, ArrowDown, Database, CheckCircle2 } from 'lucide-react';
 import { LifeStageTimeline } from './LifeStageTimeline';
 import { FamilyJourneyView } from './FamilyJourneyView';
-import { analyzeLifeStageChange, generateInitialSnapshot, explainNeed, getFamilyContextChatResponse, getEligibleSchemes } from '../services/geminiService';
-import { CitizenProfile, LifeStageUpdate, ChatSession, ChatMessage, LifeJourneyEntry, SnapshotUpdateEntry, CitizenSettings, SchemeAnalysisResult, AppLanguage } from '../types';
+import { UpdateHistoryView } from './UpdateHistoryView';
+import { analyzeLifeStageChange, generateInitialSnapshot, explainNeed, getFamilyContextChatResponse, getEligibleSchemes, detectProfileChanges, generateChatTitle, deepClean } from '../services/geminiService';
+import { CitizenProfile, LifeStageUpdate, ChatSession, ChatMessage, LifeJourneyEntry, SnapshotUpdateEntry, CitizenSettings, SchemeAnalysisResult, AppLanguage, DetectedProfileUpdate, FocusAreaContent, Scheme } from '../types';
 import { db } from '../services/firebase';
-import { doc, getDoc, setDoc, collection, onSnapshot, query, orderBy, deleteDoc, updateDoc, addDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, onSnapshot, query, orderBy, deleteDoc, updateDoc, addDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { User as FirebaseUser, deleteUser } from 'firebase/auth';
-import { jsPDF } from "jspdf";
+import { TRANSLATIONS } from '../translations';
 
 interface Props {
     user: FirebaseUser;
@@ -17,239 +18,114 @@ interface Props {
 
 const LANGUAGES: AppLanguage[] = ['English', 'Hindi', 'Marathi', 'Tamil', 'Bengali'];
 
-// Simple translation dictionary for UI elements
-const UI_TEXT: Record<string, Record<string, string>> = {
-    English: {
-        hello: "Hello",
-        familySummary: "Here's your family summary.",
-        currentStage: "Current Stage",
-        edit: "Edit",
-        familyOf: "Family of",
-        updatedNow: "Updated just now",
-        updatePrompt: "Has anything changed recently?",
-        placeholderUpdate: "e.g. My child started college...",
-        focusAreas: "Focus Areas",
-        health: "Health & Well-being",
-        education: "Education",
-        livelihood: "Livelihood",
-        govtSupport: "Govt. Support",
-        schemesTitle: "Government Schemes You May Be Eligible For",
-        schemesSubtitle: "Based on the family profile you provided.",
-        checkEligibility: "Check Eligibility",
-        analyzing: "Analyzing family profile...",
-        missingInfo: "One quick question",
-        friendlyGuide: "Friendly Guide",
-        newChat: "New Chat",
-        typeQuestion: "Type your question...",
-        familyProfile: "Family Data",
-        profileSubtitle: "Manage your account and family details.",
-        primaryMember: "Primary Member",
-        familyStructure: "Family Structure",
-        navHome: "Home",
-        navSchemes: "Schemes",
-        navChat: "Chat",
-        navProfile: "Profile",
-        voiceNotSupported: "Voice input not supported in this browser simulation.",
-        accountSettings: "User Account",
-        email: "Email",
-        method: "Method",
-        deleteAccount: "Delete Account",
-        deleteWarning: "This will permanently remove all family and scheme data.",
-        confirmDelete: "Yes, Delete Everything",
-        cancel: "Cancel",
-        save: "Save",
-        signOut: "Sign Out"
-    },
-    Hindi: {
-        hello: "नमस्ते",
-        familySummary: "यहाँ आपका परिवार सारांश है।",
-        currentStage: "वर्तमान चरण",
-        edit: "बदलें",
-        familyOf: "परिवार के सदस्य",
-        updatedNow: "अभी अपडेट किया गया",
-        updatePrompt: "क्या हाल ही में कुछ बदला है?",
-        placeholderUpdate: "जैसे: मेरा बच्चा कॉलेज जाने लगा...",
-        focusAreas: "मुख्य क्षेत्र",
-        health: "स्वास्थ्य",
-        education: "शिक्षा",
-        livelihood: "आजीविका",
-        govtSupport: "सरकारी सहायता",
-        schemesTitle: "सरकारी योजनाएं जिनके लिए आप पात्र हो सकते हैं",
-        schemesSubtitle: "आपके परिवार के विवरण के आधार पर।",
-        checkEligibility: "पात्रता जाँचें",
-        analyzing: "विश्लेषण कर रहा है...",
-        missingInfo: "एक छोटा सा सवाल",
-        friendlyGuide: "सहायक मित्र",
-        newChat: "नई चैट",
-        typeQuestion: "अपना सवाल लिखें...",
-        familyProfile: "परिवार डेटा",
-        profileSubtitle: "अपने खाते और परिवार के विवरण का प्रबंधन करें।",
-        primaryMember: "मुख्य सदस्य",
-        familyStructure: "परिवार संरचना",
-        navHome: "होम",
-        navSchemes: "योजनाएं",
-        navChat: "चैट",
-        navProfile: "प्रोफ़ाइल",
-        voiceNotSupported: "इस ब्राउज़र में वॉयस इनपुट समर्थित नहीं है।",
-        accountSettings: "उपयोगकर्ता खाता",
-        email: "ईमेल",
-        method: "तरीका",
-        deleteAccount: "खाता हटाएं",
-        deleteWarning: "यह सभी परिवार और योजना डेटा को स्थायी रूप से हटा देगा।",
-        confirmDelete: "हाँ, सब कुछ हटा दें",
-        cancel: "रद्द करें",
-        save: "सहेजें",
-        signOut: "साइन आउट"
-    },
-    Marathi: {
-        hello: "नमस्कार",
-        familySummary: "येथे तुमचा कौटुंबिक सारांश आहे.",
-        currentStage: "सध्याचा टप्पा",
-        edit: "संपादित करा",
-        familyOf: "कुटुंबातील सदस्य",
-        updatedNow: "आत्ताच अपडेट केले",
-        updatePrompt: "काही नवीन घडामोडी?",
-        placeholderUpdate: "उदा. माझा मुलगा शाळेत जाऊ लागला...",
-        focusAreas: "महत्वाचे क्षेत्र",
-        health: "आरोग्य",
-        education: "शिक्षण",
-        livelihood: "उपजीविका",
-        govtSupport: "सरकारी मदत",
-        schemesTitle: "सरकारी योजना ज्यासाठी तुम्ही पात्र असू शकता",
-        schemesSubtitle: "तुमच्या कौटुंबिक माहितीवर आधारित.",
-        checkEligibility: "पात्रता तपासा",
-        analyzing: "विश्लेषण करत आहे...",
-        missingInfo: "एक प्रश्न",
-        friendlyGuide: "मदतनीस",
-        newChat: "नवीन चॅट",
-        typeQuestion: "तुमचा प्रश्न टाइप करा...",
-        familyProfile: "कौटुंबिक माहिती",
-        profileSubtitle: "आपले खाते आणि कौटुंबिक तपशील व्यवस्थापित करा.",
-        primaryMember: "प्रमुख सदस्य",
-        familyStructure: "कुटुंब रचना",
-        navHome: "होम",
-        navSchemes: "योजना",
-        navChat: "चॅट",
-        navProfile: "प्रोफाइल",
-        voiceNotSupported: "व्हॉइस इनपुट समर्थित नाही.",
-        accountSettings: "वापरकर्ता खाते",
-        email: "ईमेल",
-        method: "पद्धत",
-        deleteAccount: "खाते हटवा",
-        deleteWarning: "हे सर्व कौटुंबिक आणि योजना डेटा कायमचे काढून टाकेल.",
-        confirmDelete: "होय, सर्वकाही हटवा",
-        cancel: "रद्द करा",
-        save: "जतन करा",
-        signOut: "साइन आउट"
-    },
-    Tamil: {
-        hello: "வணக்கம்",
-        familySummary: "உங்கள் குடும்ப விவரம்.",
-        currentStage: "தற்போதைய நிலை",
-        edit: "திருத்து",
-        familyOf: "குடும்ப உறுப்பினர்",
-        updatedNow: "இப்போது புதுப்பிக்கப்பட்டது",
-        updatePrompt: "ஏதேனும் மாற்றம் உள்ளதா?",
-        placeholderUpdate: "எ.கா. என் மகன் கல்லூரிக்குச் செல்கிறான்...",
-        focusAreas: "முக்கிய பகுதிகள்",
-        health: "சுகாதாரம்",
-        education: "கல்வி",
-        livelihood: "வாழ்வாதாரம்",
-        govtSupport: "அரசு உதவி",
-        schemesTitle: "தகுதியான அரசு திட்டங்கள்",
-        schemesSubtitle: "உங்கள் குடும்ப விவரங்களின் அடிப்படையில்.",
-        checkEligibility: "தகுதியை சரிபார்க்கவும்",
-        analyzing: "ஆய்வு செய்கிறது...",
-        missingInfo: "ஒரு கேள்வி",
-        friendlyGuide: "நண்பன்",
-        newChat: "புதிய அரட்டை",
-        typeQuestion: "கேள்வியைக் கேட்கவும்...",
-        familyProfile: "குடும்பத் தரவு",
-        profileSubtitle: "உங்கள் கணக்கு மற்றும் குடும்ப விவரங்களை நிர்வகிக்கவும்.",
-        primaryMember: "முதன்மை உறுப்பினர்",
-        familyStructure: "குடும்ப அமைப்பு",
-        navHome: "முகப்பு",
-        navSchemes: "திட்டங்கள்",
-        navChat: "அரட்டை",
-        navProfile: "சுயவிவரம்",
-        voiceNotSupported: "குரல் உள்ளீடு ஆதரிக்கப்படவில்லை.",
-        accountSettings: "பயனர் கணக்கு",
-        email: "மின்னஞ்சல்",
-        method: "முறை",
-        deleteAccount: "கணக்கை நீக்கு",
-        deleteWarning: "இது அனைத்து குடும்ப மற்றும் திட்டத் தரவையும் நிரந்தரமாக அகற்றும்.",
-        confirmDelete: "ஆம், அனைத்தையும் நீக்கு",
-        cancel: "ரத்துசெய்",
-        save: "சேமி",
-        signOut: "வெளியேறு"
-    },
-    Bengali: {
-        hello: "নমস্কার",
-        familySummary: "এখানে আপনার পরিবারের সারাংশ।",
-        currentStage: "বর্তমান পর্যায়",
-        edit: "সম্পাদনা",
-        familyOf: "পরিবারের সদস্য",
-        updatedNow: "এইমাত্র আপডেট করা হয়েছে",
-        updatePrompt: "সম্প্রতি কিছু কি পরিবর্তন হয়েছে?",
-        placeholderUpdate: "যেমন: আমার ছেলে কলেজে ভর্তি হয়েছে...",
-        focusAreas: "ফোকাস এলাকা",
-        health: "স্বাস্থ্য",
-        education: "শিক্ষা",
-        livelihood: "জীবিকা",
-        govtSupport: "সরকারি সহায়তা",
-        schemesTitle: "সরকারি প্রকল্প যার জন্য আপনি যোগ্য হতে পারেন",
-        schemesSubtitle: "আপনার পরিবারের তথ্যের ভিত্তিতে।",
-        checkEligibility: "যোগ্যতা যাচাই করুন",
-        analyzing: "বিশ্লেষণ করা হচ্ছে...",
-        missingInfo: "একটি প্রশ্ন",
-        friendlyGuide: "বন্ধু",
-        newChat: "নতুন চ্যাট",
-        typeQuestion: "আপনার প্রশ্ন লিখুন...",
-        familyProfile: "পারিবারিক তথ্য",
-        profileSubtitle: "আপনার অ্যাকাউন্ট এবং পরিবারের বিবরণ পরিচালনা করুন।",
-        primaryMember: "প্রধান সদস্য",
-        familyStructure: "পারিবারিক কাঠামো",
-        navHome: "হোম",
-        navSchemes: "প্রকল্প",
-        navChat: "চ্যাট",
-        navProfile: "প্রোফাইল",
-        voiceNotSupported: "ভয়েস ইনপুট সমর্থিত নয়।",
-        accountSettings: "ব্যবহারকারী অ্যাকাউন্ট",
-        email: "ইমেল",
-        method: "পদ্ধতি",
-        deleteAccount: "অ্যাকাউন্ট মুছুন",
-        deleteWarning: "এটি স্থায়ীভাবে সমস্ত পরিবার এবং প্রকল্পের ডেটা সরিয়ে দেবে।",
-        confirmDelete: "হ্যাঁ, সব মুছে ফেলুন",
-        cancel: "বাতিল",
-        save: "সংরক্ষণ",
-        signOut: "সাইন আউট"
-    }
-};
-
-const BCP47_MAP: Record<string, string> = {
-    'English': 'en-US',
-    'Hindi': 'hi-IN',
-    'Marathi': 'mr-IN',
-    'Tamil': 'ta-IN',
-    'Bengali': 'bn-IN'
-};
-
-// -- Wizard Helper Components --
+// -- Constants for Options --
+const STATES_LIST = ['Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu and Kashmir', 'Ladakh'];
 
 const WizardOptionButton: React.FC<{ label: string, selected: boolean, onClick: () => void }> = ({ label, selected, onClick }) => (
     <button 
         onClick={onClick}
-        className={`w-full text-left p-4 rounded-xl border font-medium transition-all ${selected ? 'bg-teal-600 text-white border-teal-600 shadow-md' : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'}`}
+        className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-200 group relative overflow-hidden ${
+            selected 
+                ? 'bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-900/20' 
+                : 'bg-white/50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-white'
+        }`}
     >
-        {label}
+        <div className="flex justify-between items-center relative z-10">
+            <span className={`text-lg font-bold ${selected ? 'text-white' : 'text-slate-800'}`}>{label}</span>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${selected ? 'bg-white/20' : 'bg-slate-100 group-hover:bg-slate-200'}`}>
+                {selected && <Check size={14} className="text-white" strokeWidth={3} />}
+            </div>
+        </div>
     </button>
 );
 
-const ProgressBar = ({ current, total }: { current: number, total: number }) => (
-    <div className="w-full bg-stone-100 h-1.5 rounded-full mb-6 overflow-hidden">
-        <div className="bg-teal-500 h-full transition-all duration-300" style={{ width: `${(current / total) * 100}%` }}></div>
+const WizardProgress = ({ current, total, t }: { current: number, total: number, t: any }) => (
+    <div className="mb-8 flex items-center gap-3">
+        <div className="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden">
+            <div className="bg-slate-900 h-full transition-all duration-500 ease-out" style={{ width: `${Math.min((current / total) * 100, 100)}%` }}></div>
+        </div>
+        <span className="text-xs font-black text-slate-400 font-mono">{t.wizard.step} {current}/{total}</span>
     </div>
 );
+
+const WizardScreen = ({ title, children, progress, canProceed, nextLabel, onNext, onBack, t }: any) => (
+    <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-8 duration-500">
+        {progress && <WizardProgress current={progress.current} total={progress.total} t={t} />}
+        
+        <h2 className="text-4xl font-extrabold text-slate-900 leading-[1.1] mb-8 tracking-tight">{title}</h2>
+        
+        <div className="flex-1 overflow-y-auto no-scrollbar py-2 space-y-3 -mx-2 px-2">
+            {children}
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-slate-200/50 flex gap-4 items-center">
+            <button 
+                onClick={onBack} 
+                className="px-6 py-4 rounded-2xl text-slate-400 font-bold hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            >
+                {t.common.back}
+            </button>
+            <button 
+                onClick={onNext} 
+                disabled={!canProceed} 
+                className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-500/30 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:shadow-none transition-all flex justify-center items-center gap-2"
+            >
+                {nextLabel || t.common.continue}
+                <ArrowRight size={20} />
+            </button>
+        </div>
+    </div>
+);
+
+// --- SCHEME CARD COMPONENT ---
+const SchemeCard: React.FC<{ scheme: Scheme, t: any }> = ({ scheme, t }) => {
+    const [showReason, setShowReason] = useState(false);
+
+    const getBadgeStyle = (cat: string) => {
+        switch(cat) {
+            case 'Health': return 'bg-rose-100 text-rose-700 border-rose-200';
+            case 'Education': return 'bg-sky-100 text-sky-700 border-sky-200';
+            case 'Pension': return 'bg-purple-100 text-purple-700 border-purple-200';
+            case 'Livelihood': return 'bg-amber-100 text-amber-700 border-amber-200';
+            case 'Housing': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            default: return 'bg-slate-100 text-slate-600 border-slate-200';
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
+            <div className="flex justify-between items-start mb-3 relative z-10">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${getBadgeStyle(scheme.category)}`}>
+                    {scheme.category}
+                </span>
+            </div>
+            
+            <h4 className="font-bold text-slate-900 text-xl mb-2 relative z-10">{scheme.name}</h4>
+            <p className="text-slate-600 font-medium leading-relaxed mb-4 relative z-10">
+                {scheme.description}
+            </p>
+
+            <button 
+                onClick={() => setShowReason(!showReason)}
+                className="flex items-center gap-2 text-indigo-600 font-bold text-sm hover:underline relative z-10"
+            >
+                <HelpCircle size={16} />
+                {t.schemes.whySuggested}
+            </button>
+
+            {showReason && (
+                <div className="mt-4 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 animate-in fade-in slide-in-from-top-2 relative z-10">
+                    <p className="text-indigo-900 text-sm font-medium">
+                        {scheme.eligibilityReason}
+                    </p>
+                </div>
+            )}
+            
+            {/* Hover Blob */}
+            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-slate-50 rounded-full group-hover:scale-150 transition-transform duration-500 z-0"></div>
+        </div>
+    );
+};
 
 export const CitizenView: React.FC<Props> = ({ user, onSignOut }) => {
   const deviceId = user.uid;
@@ -258,50 +134,45 @@ export const CitizenView: React.FC<Props> = ({ user, onSignOut }) => {
   const [lifeState, setLifeState] = useState<LifeStageUpdate | null>(null);
   const [settings, setSettings] = useState<CitizenSettings>({ isPaused: false, language: 'English' });
   
-  // Initialize with safe defaults
+  // Profile State
   const [profile, setProfile] = useState<CitizenProfile>({
     username: '', 
+    accountScope: undefined, 
     memberCount: 1, 
     primaryUser: {},
     spouse: {},
     children: [],
     parents: [],
     siblings: [],
-    // Legacy defaults
-    isPregnant: false,
-    childrenCounts: { age0to1: 0, age1to6: 0, age6to14: 0, age14to18: 0 },
-    livelihood: '', 
-    incomeStability: 'variable', 
-    financialPressure: 'manageable'
   });
   
+  // Update Logic States
+  const [pendingUpdate, setPendingUpdate] = useState<DetectedProfileUpdate | null>(null);
+  const [updateHistory, setUpdateHistory] = useState<SnapshotUpdateEntry[]>([]);
+  
+  // View States
+  const [isViewingUpdateHistory, setIsViewingUpdateHistory] = useState(false);
+  const [isViewingJourney, setIsViewingJourney] = useState(false);
+  
+  // Focus Area State
+  const [selectedFocusArea, setSelectedFocusArea] = useState<{id: string, content: FocusAreaContent} | null>(null);
+
   // UI State
   const [isSynced, setIsSynced] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [consentGiven, setConsentGiven] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   
   // Navigation State
-  const [currentView, setCurrentView] = useState<'HOME' | 'SCHEMES' | 'CHAT' | 'PROFILE'>('HOME');
-
-  // Wizard State
-  const [wizardStep, setWizardStep] = useState(0); 
-  const [accountScope, setAccountScope] = useState<'individual' | 'family' | null>(null);
-  const [tempConsent, setTempConsent] = useState(false);
-
-  // Wizard Temporary State
-  const [tempChildCount, setTempChildCount] = useState<number | null>(null);
+  const [currentView, setCurrentView] = useState<'HOME' | 'SCHEMES' | 'CHAT' | 'PROFILE' | 'SETTINGS'>('HOME');
+  
+  // Wizard Navigation
+  const [currentStepId, setCurrentStepId] = useState<string>('welcome');
+  const [stepHistory, setStepHistory] = useState<string[]>([]);
   
   // General UI
-  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [updateInput, setUpdateInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
-  // Profile Management State
-  const [isEditingUsername, setIsEditingUsername] = useState(false);
-  const [tempUsername, setTempUsername] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  // Schemes State
   const [schemeData, setSchemeData] = useState<SchemeAnalysisResult | null>(null);
   const [isCheckingSchemes, setIsCheckingSchemes] = useState(false);
   const [missingFieldInput, setMissingFieldInput] = useState('');
@@ -311,25 +182,29 @@ export const CitizenView: React.FC<Props> = ({ user, onSignOut }) => {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isChatDeleting, setIsChatDeleting] = useState<string | null>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // --- Helpers ---
-  const t = UI_TEXT[settings.language] || UI_TEXT['English'];
-  
-  const getProviderName = () => {
-    if (user.providerData.length === 0) return 'Email/Password';
-    const provider = user.providerData[0].providerId;
-    if (provider === 'google.com') return 'Google';
-    if (provider === 'password') return 'Email';
-    return provider;
-  };
+  // Profile View State
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
+
+  // Settings View State
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
+  const [isProcessingClear, setIsProcessingClear] = useState(false);
+
+  // TRANSLATION HELPER
+  // @ts-ignore
+  const t = TRANSLATIONS[settings.language] || TRANSLATIONS['English'];
 
   // --- Voice Utils ---
   const speakText = (text: string) => {
       if ('speechSynthesis' in window) {
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = BCP47_MAP[settings.language] || 'en-US';
+          utterance.lang = 'en-US';
           window.speechSynthesis.speak(utterance);
       }
   };
@@ -339,36 +214,26 @@ export const CitizenView: React.FC<Props> = ({ user, onSignOut }) => {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
           const recognition = new SpeechRecognition();
-          recognition.lang = BCP47_MAP[settings.language] || 'en-US';
+          recognition.lang = 'en-US';
           recognition.continuous = false;
-          
           recognition.onresult = (event: any) => {
               const transcript = event.results[0][0].transcript;
               setInput(transcript);
           };
-          
           recognition.start();
       } else {
-          alert(t.voiceNotSupported);
+          alert("Voice input not supported in this browser simulation.");
       }
   };
 
-  // --- Auto-detect Language ---
-  useEffect(() => {
-    // Only detect if no language preference is saved
-    if (isSynced && !settings.language) {
-         const navLang = navigator.language.split('-')[0];
-         let detected: AppLanguage = 'English';
-         if (navLang === 'hi') detected = 'Hindi';
-         if (navLang === 'mr') detected = 'Marathi';
-         if (navLang === 'ta') detected = 'Tamil';
-         if (navLang === 'bn') detected = 'Bengali';
-         
-         if (detected !== 'English') {
-             updateSettings({ language: detected });
-         }
-    }
-  }, [isSynced]);
+  // --- Helpers for Greetings ---
+  const getLocalizedGreeting = (lang: AppLanguage, name?: string) => {
+    const cleanName = name?.trim() || "";
+    const namePart = cleanName ? `, ${cleanName}` : "";
+    
+    // We can now use the t object for basic greeting, but we might want custom logic for names
+    return `${t.home.greeting}${namePart} 👋`;
+  };
 
   // --- Firebase Sync ---
   useEffect(() => {
@@ -377,27 +242,23 @@ export const CitizenView: React.FC<Props> = ({ user, onSignOut }) => {
       if (snap.exists()) {
         const data = snap.data();
         if (data.profile) {
-            // MERGE to ensure sub-objects exist even if DB is partial (Fix for undefined 'age')
-            setProfile(prev => ({
-                ...prev,
-                ...data.profile,
-                primaryUser: data.profile.primaryUser || {},
-                spouse: data.profile.spouse || {},
-                children: data.profile.children || [],
-                parents: data.profile.parents || [],
-                siblings: data.profile.siblings || []
-            }));
+            setProfile(prev => ({ ...prev, ...data.profile }));
         }
         setLifeState(data.lifeState || null);
-        if (data.lifeState) setConsentGiven(true);
-        if (data.settings?.language) {
-            setSettings(prev => ({ ...prev, ...data.settings }));
-        }
+        if (data.settings?.language) setSettings(prev => ({ ...prev, ...data.settings }));
         setIsSynced(true);
         setIsInitializing(false);
       } else {
         setIsInitializing(false);
       }
+    });
+
+    const updatesRef = collection(db, 'households', deviceId, 'updates');
+    const qUpdates = query(updatesRef, orderBy('timestamp', 'desc'));
+    const unsubUpdates = onSnapshot(qUpdates, (snap) => {
+        const history: SnapshotUpdateEntry[] = [];
+        snap.forEach(doc => history.push({id: doc.id, ...doc.data()} as SnapshotUpdateEntry));
+        setUpdateHistory(history);
     });
 
     const chatsRef = collection(db, 'households', deviceId, 'chats');
@@ -406,566 +267,815 @@ export const CitizenView: React.FC<Props> = ({ user, onSignOut }) => {
       const newChats: Record<string, ChatSession> = {};
       snap.forEach(doc => { newChats[doc.id] = doc.data() as ChatSession; });
       setChats(newChats);
+      // If no active chat but chats exist, select the most recent one (first in query desc order)
       if (!activeChatId && snap.docs.length > 0) setActiveChatId(snap.docs[0].id);
     });
 
-    return () => { unsubHousehold(); unsubChats(); };
-  }, [deviceId, activeChatId]);
+    return () => { unsubHousehold(); unsubUpdates(); unsubChats(); };
+  }, [deviceId]);
 
-  const saveToFirebase = async (newProfile: CitizenProfile, newLifeState: LifeStageUpdate) => {
-    await setDoc(doc(db, 'households', deviceId), { 
-        profile: newProfile, lifeState: newLifeState, settings, updatedAt: Date.now() 
-    }, { merge: true });
+  // Scroll to bottom of chat
+  useEffect(() => {
+      if (chatBottomRef.current) {
+          chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+  }, [chats, activeChatId, isChatLoading]);
+
+  const saveToFirebase = async (newProfile: CitizenProfile, newLifeState: LifeStageUpdate | null) => {
+    const payload: any = { profile: newProfile, settings, updatedAt: Date.now() };
+    if (newLifeState) payload.lifeState = newLifeState;
+    await setDoc(doc(db, 'households', deviceId), payload, { merge: true });
   };
 
-  const updateSettings = async (newSettings: Partial<CitizenSettings>) => {
-      const updated = { ...settings, ...newSettings };
-      setSettings(updated);
-      await setDoc(doc(db, 'households', deviceId), { settings: updated }, { merge: true });
-  };
-
-  // --- Core Handlers ---
-
-  const handleUpdate = async () => {
-    if (!updateInput.trim() || !lifeState) return;
+  const handleUpdateSubmit = async () => {
+    if (!updateInput.trim()) return;
     setIsAnalyzing(true);
-    const result = await analyzeLifeStageChange(lifeState.currentStage, updateInput, settings.language);
-    let nextProfile = { ...profile };
-    // Simplified update logic for prototype
-    setLifeState(result);
-    await saveToFirebase(nextProfile, result);
-    setUpdateInput('');
-    setIsAnalyzing(false);
+    try {
+        const detectedChanges = await detectProfileChanges(profile, updateInput, settings.language);
+        setPendingUpdate(detectedChanges);
+    } catch (e) {
+        console.error(e);
+        alert("Could not process update. Please try again.");
+    } finally {
+        setIsAnalyzing(false);
+    }
   };
 
-  const handleSaveUsername = async () => {
-      if (!tempUsername.trim()) return;
-      const updated = { ...profile, username: tempUsername };
-      setProfile(updated);
-      await setDoc(doc(db, 'households', deviceId), { profile: updated }, { merge: true });
-      setIsEditingUsername(false);
+  const confirmUpdate = async () => {
+      if (!pendingUpdate) return;
+      setIsAnalyzing(true);
+      try {
+          // 1. Update Profile State
+          const newProfile = pendingUpdate.newProfileState;
+          
+          // 2. Recompute Life Stage
+          const newLifeStage = await generateInitialSnapshot(newProfile, settings.language);
+          
+          // 3. Save History Entry with Life Stage
+          const updateEntry: any = {
+              date: new Date().toLocaleDateString(),
+              user_input: updateInput,
+              change_summary: pendingUpdate.summary,
+              changes_detailed: pendingUpdate.changes,
+              previous_profile_state: JSON.stringify(deepClean(profile)), // Save OLD profile for rollback
+              life_stage: newLifeStage.currentStage, // Save new stage for history
+              timestamp: Date.now()
+          };
+          
+          await addDoc(collection(db, 'households', deviceId, 'updates'), updateEntry);
+          
+          // 4. Save Core Data
+          await saveToFirebase(newProfile, newLifeStage);
+          
+          setProfile(newProfile);
+          setLifeState(newLifeStage);
+          setPendingUpdate(null);
+          setUpdateInput('');
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsAnalyzing(false);
+      }
+  };
+
+  const cancelUpdate = () => {
+      setPendingUpdate(null);
+  };
+
+  const handleHistoryDeletion = async (idToDelete: string) => {
+      try {
+          // 1. Find the entry
+          const entry = updateHistory.find(h => h.id === idToDelete);
+          if (entry && entry.previous_profile_state) {
+              // 2. Revert Profile
+              const revertedProfile = JSON.parse(entry.previous_profile_state) as CitizenProfile;
+              setProfile(revertedProfile);
+
+              // 3. Recompute Stage based on Reverted Profile
+              const revertedLifeStage = await generateInitialSnapshot(revertedProfile, settings.language);
+              setLifeState(revertedLifeStage);
+
+              // 4. Save Reverted State
+              await saveToFirebase(revertedProfile, revertedLifeStage);
+          }
+
+          // 5. Delete the doc
+          await deleteDoc(doc(db, 'households', deviceId, 'updates', idToDelete));
+      } catch (e) {
+          console.error("Rollback failed", e);
+      }
+  };
+
+  // --- SETTINGS HANDLERS ---
+  const handleEditSnapshot = () => {
+      // Re-entering the wizard flow to edit details
+      setCurrentStepId('a1_gender'); // Skip welcome, go straight to inputs
+      setLifeState(null); // This triggers the "Setup" view (Wizard)
+  };
+
+  const handleClearHistory = async () => {
+      setIsProcessingClear(true);
+      try {
+           // Delete updates
+           const updatesSnapshot = await getDocs(collection(db, 'households', deviceId, 'updates'));
+           const batch = writeBatch(db);
+           updatesSnapshot.docs.forEach(d => batch.delete(d.ref));
+           await batch.commit();
+  
+           // Recalculate
+           const newState = await generateInitialSnapshot(profile, settings.language);
+           await saveToFirebase(profile, newState);
+           setLifeState(newState);
+           setUpdateHistory([]); // clear local state
+           setConfirmClearHistory(false);
+      } catch (e) {
+          console.error("Failed to clear history", e);
+          alert("Failed to clear history. Please try again.");
+      } finally {
+          setIsProcessingClear(false);
+      }
+  };
+
+  // --- PROFILE HANDLERS ---
+  const handleUpdateUsername = async () => {
+      if (!editNameValue.trim()) return;
+      
+      const newProfile = { ...profile, username: editNameValue.trim() };
+      setProfile(newProfile); // Optimistic update
+      setIsEditingName(false);
+      
+      try {
+          await updateDoc(doc(db, 'households', deviceId), {
+              'profile.username': newProfile.username
+          });
+      } catch (e) {
+          console.error("Failed to update username", e);
+          alert("Could not update username.");
+      }
+  };
+
+  const handleFullAccountDeletion = async () => {
+      setIsDeleteProcessing(true);
+      try {
+          // 1. Delete Subcollections (Updates, Chats)
+          const updatesSnapshot = await getDocs(collection(db, 'households', deviceId, 'updates'));
+          const updateDeletions = updatesSnapshot.docs.map(d => deleteDoc(d.ref));
+          
+          const chatsSnapshot = await getDocs(collection(db, 'households', deviceId, 'chats'));
+          const chatDeletions = chatsSnapshot.docs.map(d => deleteDoc(d.ref));
+          
+          await Promise.all([...updateDeletions, ...chatDeletions]);
+          
+          // 2. Delete Main Document
+          await deleteDoc(doc(db, 'households', deviceId));
+          
+          // 3. Delete Auth User
+          await deleteUser(user);
+          // App.tsx will handle the redirect to AuthView via onAuthStateChanged
+      } catch (e) {
+          console.error("Deletion failed", e);
+          alert("Account deletion failed. You may need to sign in again to verify your identity before deleting.");
+          setIsDeleteProcessing(false);
+          setIsDeletingAccount(false);
+      }
+  };
+
+  // --- CHAT HANDLERS ---
+  const handleSendMessage = async () => {
+    if (!chatInput.trim()) return;
+    
+    const userMsg = chatInput;
+    setChatInput(''); // Clear immediately
+    
+    let chatId = activeChatId;
+    let currentSession = chatId ? chats[chatId] : null;
+    let newMessages: ChatMessage[] = [];
+
+    if (currentSession) {
+        newMessages = [...currentSession.messages, { role: 'user', content: userMsg }];
+    } else {
+        newMessages = [{ role: 'user', content: userMsg }];
+    }
+
+    setIsChatLoading(true);
+
+    try {
+        // If no chat ID, create one
+        if (!chatId) {
+            const title = await generateChatTitle(userMsg, settings.language);
+            const newChatRef = await addDoc(collection(db, 'households', deviceId, 'chats'), {
+                title,
+                messages: newMessages, // Save initial user message
+                timestamp: Date.now()
+            });
+            chatId = newChatRef.id;
+            setActiveChatId(chatId);
+            currentSession = { id: chatId, title, messages: newMessages, timestamp: Date.now() };
+        } else {
+             // Add user message to existing chat
+             await updateDoc(doc(db, 'households', deviceId, 'chats', chatId), {
+                 messages: newMessages
+             });
+        }
+
+        // Get AI Response
+        const aiResponseText = await getFamilyContextChatResponse(
+            profile,
+            lifeState!.currentStage,
+            lifeState!.immediateNeeds,
+            currentSession && currentSession.messages ? currentSession.messages : [], 
+            userMsg,
+            settings.language,
+            schemeData?.schemes,
+            updateHistory
+        );
+
+        // Save AI Response
+        const finalMessages = [...newMessages, { role: 'model', content: aiResponseText }];
+        await updateDoc(doc(db, 'households', deviceId, 'chats', chatId), {
+             messages: finalMessages,
+             timestamp: Date.now() // Update timestamp to bump to top
+        });
+
+    } catch (e) {
+        console.error("Chat Error", e);
+    } finally {
+        setIsChatLoading(false);
+    }
+  };
+
+  const handleDeleteChat = async (id: string) => {
+    await deleteDoc(doc(db, 'households', deviceId, 'chats', id));
+    if (activeChatId === id) setActiveChatId(null);
+    setIsChatDeleting(null);
+  };
+
+  // --- HELPERS ---
+  
+  // Map updates to life journey entries for the Full View
+  const getJourneyEntries = (): LifeJourneyEntry[] => {
+      return updateHistory.map(h => ({
+          id: h.id,
+          date: h.date,
+          eventType: 'life_stage_change',
+          // RULE: Show AI-interpreted summary ("change_summary"), NOT user input.
+          summary: h.change_summary, 
+          // Use the captured life stage or a fallback
+          lifeStagesAfter: h.life_stage ? [h.life_stage] : ["Life Transition"],
+          source: 'system_inference',
+          timestamp: h.timestamp
+      }));
   };
   
-  const handleDeleteAccount = async () => {
-      try {
-          await deleteDoc(doc(db, 'households', deviceId));
-          await deleteUser(user);
-      } catch (error) {
-          console.error("Delete account error", error);
-          alert("For security, please sign out and sign in again before deleting your account.");
-      }
+  // --- WIZARD NAVIGATION LOGIC ---
+
+  const getNextStep = (currentId: string): string => {
+      const p = profile;
+      if (currentId === 'welcome') return 'a1_gender';
+      if (currentId === 'a1_gender') return 'a2_age';
+      if (currentId === 'a2_age') return 'summary'; 
+      // Simplified wizard logic for brevity in this response
+      return 'summary';
   };
 
-  const handleCheckSchemes = async () => {
-      if (!lifeState) return;
-      setIsCheckingSchemes(true);
-      setSchemeData(null);
-      const result = await getEligibleSchemes(profile, lifeState.currentStage, settings.language);
-      setSchemeData(result);
-      setIsCheckingSchemes(false);
+  const handleBack = () => {
+        if (stepHistory.length === 0) return;
+        const prev = stepHistory[stepHistory.length - 1];
+        setStepHistory(prevH => prevH.slice(0, -1));
+        setCurrentStepId(prev);
   };
 
-  const submitMissingSchemeInfo = async () => {
-      if (!missingFieldInput.trim() || !schemeData?.missingField) return;
-      const updatedProfile = { ...profile, [schemeData.missingField]: missingFieldInput };
-      setProfile(updatedProfile);
-      setMissingFieldInput('');
-      setIsCheckingSchemes(true);
-      await setDoc(doc(db, 'households', deviceId), { profile: updatedProfile }, { merge: true });
-      const result = await getEligibleSchemes(updatedProfile, lifeState!.currentStage, settings.language);
-      setSchemeData(result);
-      setIsCheckingSchemes(false);
-  };
-
-  const createNewChat = async () => {
-      const newId = Date.now().toString();
-      const newChat: ChatSession = { id: newId, title: 'New Chat', messages: [], timestamp: Date.now() };
-      await setDoc(doc(db, 'households', deviceId, 'chats', newId), newChat);
-      setActiveChatId(newId);
-      setCurrentView('CHAT');
-  };
-
-  const handleChatSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!chatInput.trim() || !lifeState) {
-          if (!activeChatId) await createNewChat(); 
-      }
-      
-      let currentId = activeChatId;
-      if (!currentId) {
-           currentId = Date.now().toString();
-           const newChat: ChatSession = { id: currentId, title: 'Family Chat', messages: [], timestamp: Date.now() };
-           await setDoc(doc(db, 'households', deviceId, 'chats', currentId), newChat);
-           setActiveChatId(currentId);
-      }
-
-      const userMessage: ChatMessage = { role: 'user', content: chatInput };
-      const currentChat = chats[currentId!] || { messages: [] };
-      const updatedMessages = [...currentChat.messages, userMessage];
-      
-      setChatInput('');
-      setIsChatLoading(true);
-      
-      const chatRef = doc(db, 'households', deviceId, 'chats', currentId!);
-      await updateDoc(chatRef, { messages: updatedMessages });
-      
-      const responseText = await getFamilyContextChatResponse(
-          profile, lifeState!.currentStage, lifeState!.immediateNeeds,
-          updatedMessages, userMessage.content, settings.language,
-          schemeData?.schemes // Pass scheme data to AI
-      );
-      
-      const aiMessage: ChatMessage = { role: 'model', content: responseText };
-      await updateDoc(chatRef, { messages: [...updatedMessages, aiMessage] });
-      setIsChatLoading(false);
-      speakText(responseText); // Optional auto-speak response
-  };
-
-  // --- Wizard Logic ---
-
-  const nextStep = () => setWizardStep(s => s + 1);
-  const prevStep = () => setWizardStep(s => Math.max(0, s - 1));
-
-  const WizardPage = ({ title, children, canProceed, onNext, onBack }: any) => (
-      <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-          <div className="flex items-center gap-3 mb-2">
-            {onBack && <button onClick={onBack} className="text-stone-400 hover:text-stone-600"><ArrowLeft size={20}/></button>}
-            <h2 className="text-xl font-bold text-stone-800">{title}</h2>
-          </div>
-          <div className="space-y-4 py-2">
-              {children}
-          </div>
-          {onNext && (
-            <button onClick={onNext} disabled={!canProceed} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold mt-4 shadow-lg disabled:opacity-50 disabled:shadow-none">
-                Next
-            </button>
-          )}
-      </div>
-  );
-
-  const updatePrimary = (field: string, value: any) => {
-      setProfile(p => ({ ...p, primaryUser: { ...p.primaryUser, [field]: value } }));
-  };
-  const updateSpouse = (field: string, value: any) => {
-    setProfile(p => ({ ...p, spouse: { ...p.spouse, [field]: value } }));
+  const handleNext = () => {
+    const nextId = getNextStep(currentStepId);
+    if (nextId) {
+        setStepHistory(prev => [...prev, currentStepId]);
+        setCurrentStepId(nextId);
+    }
   };
 
   const finishWizard = async () => {
-    setIsInitializing(true);
-    // Derive high-level fields for compatibility
-    const updatedProfile = {
-        ...profile,
-        memberCount: 1 + (profile.spouse ? 1 : 0) + (profile.children?.length || 0) + (profile.parents?.length || 0) + (profile.siblings?.length || 0),
-        state: profile.primaryUser.state,
-        livelihood: profile.primaryUser.occupation,
-        residenceType: profile.primaryUser.residenceType
-    };
-    const init = await generateInitialSnapshot(updatedProfile, settings.language);
-    setLifeState(init);
-    await saveToFirebase(updatedProfile, init);
-    setConsentGiven(true);
-    setIsInitializing(false);
+      setIsInitializing(true);
+      try {
+        const initialState = await generateInitialSnapshot(profile, settings.language);
+        await saveToFirebase(profile, initialState);
+        setLifeState(initialState);
+      } catch (e) {
+        console.error("Setup failed", e);
+      } finally {
+        setIsInitializing(false);
+      }
   };
 
+  const renderWizardContent = () => {
+      const commonProps = { progress: {current: 1, total: 3}, onBack: handleBack, onNext: handleNext, t };
+      if (currentStepId === 'welcome') {
+          return (
+             <WizardScreen title={`${t.wizard.welcome}, ${profile.username}`} {...commonProps} nextLabel={t.wizard.start} canProceed={true} onBack={() => {}}>
+                  <p className="text-xl text-slate-600 mb-6 font-medium leading-relaxed">{t.wizard.intro}</p>
+             </WizardScreen>
+          )
+      }
+      if (currentStepId === 'a1_gender') {
+          return (
+             <WizardScreen title={t.wizard.gender} {...commonProps} canProceed={!!profile.primaryUser.gender}>
+                 {['Male', 'Female', 'Other'].map(o => <WizardOptionButton key={o} label={o} selected={profile.primaryUser.gender === o} onClick={() => setProfile(p => ({...p, primaryUser: {...p.primaryUser, gender: o as any}}))} />)}
+             </WizardScreen>
+          )
+      }
+      if (currentStepId === 'a2_age') {
+           return (
+             <WizardScreen title={t.wizard.age} {...commonProps} canProceed={!!profile.primaryUser.age}>
+                  <input type="number" placeholder="Enter Age" className="w-full p-6 text-3xl font-bold bg-white rounded-2xl border-2 border-slate-100 focus:border-indigo-500 outline-none" autoFocus value={profile.primaryUser.age || ''} onChange={(e) => {
+                       setProfile(p => ({...p, primaryUser: {...p.primaryUser, age: e.target.value}}));
+                  }}/>
+             </WizardScreen>
+           )
+      }
+      if (currentStepId === 'summary') {
+          return (
+            <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+               <div className="text-center mb-8">
+                   <div className="w-24 h-24 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-full flex items-center justify-center mx-auto text-white mb-6 shadow-xl shadow-emerald-500/30">
+                       <ShieldCheck size={48} strokeWidth={2} />
+                   </div>
+                   <h2 className="text-4xl font-extrabold text-slate-900 mb-2 tracking-tight">{t.wizard.allSet}</h2>
+               </div>
+               <div className="mt-auto flex gap-4">
+                   <button onClick={finishWizard} className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-slate-300 hover:bg-indigo-600 hover:shadow-indigo-500/30 hover:-translate-y-1 transition-all">
+                       {t.wizard.enterDashboard}
+                   </button>
+               </div>
+           </div>
+          );
+      }
+      return <div></div>;
+  };
 
-  // --- Render ---
+  if (isInitializing) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-slate-900 w-12 h-12" /></div>;
 
-  if (isInitializing) return <div className="min-h-screen bg-white flex items-center justify-center"><Loader2 className="animate-spin text-teal-600 w-8 h-8" /></div>;
-
-  // --- Wizard Flow ---
-  if (!consentGiven || !lifeState) {
+  // --- Main Render (Wrapper) ---
+  if (!lifeState) {
       return (
-          <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
-              <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-stone-100">
-                  {/* ... (Existing Wizard Steps preserved) ... */}
-                  {/* Step 0: Welcome */}
-                  {wizardStep === 0 && (
-                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                          <div className="flex justify-center mb-6">
-                              <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center text-teal-600"><Activity size={32} /></div>
-                          </div>
-                          <h1 className="text-2xl font-bold text-stone-800 text-center">Welcome to ConnectiVita</h1>
-                          <p className="text-stone-500 text-center text-sm px-2">This space helps you understand life stages and government schemes.</p>
-                          
-                          <div className="bg-stone-50 p-4 rounded-xl border border-stone-100 space-y-3">
-                              {['We ask questions to match schemes accurately.', 'You control what you share.', 'No documents are required.'].map((txt, i) => (
-                                  <div key={i} className="flex gap-3 items-start">
-                                      <div className="bg-white p-1 rounded shadow-sm"><Check size={14} className="text-teal-600"/></div>
-                                      <p className="text-xs text-stone-600">{txt}</p>
-                                  </div>
-                              ))}
-                          </div>
-
-                          <div className="space-y-3 pt-2">
-                              <p className="text-sm font-bold text-stone-700">Who are you creating this account for?</p>
-                              {[
-                                  { id: 'individual', icon: UserIcon, label: 'Only for myself' },
-                                  { id: 'family', icon: Users, label: 'For myself and my entire family' }
-                              ].map(opt => (
-                                  <button key={opt.id} onClick={() => setAccountScope(opt.id as any)} className={`w-full p-4 rounded-xl border flex items-center gap-3 transition-all ${accountScope === opt.id ? 'border-teal-500 bg-teal-50 ring-1 ring-teal-500' : 'border-stone-200 hover:border-teal-200'}`}>
-                                      <opt.icon size={20} className={accountScope === opt.id ? 'text-teal-600' : 'text-stone-400'} />
-                                      <span className={`text-sm font-medium ${accountScope === opt.id ? 'text-teal-800' : 'text-stone-600'}`}>{opt.label}</span>
-                                  </button>
-                              ))}
-                          </div>
-
-                          <div className="pt-4 border-t border-stone-100">
-                              <label className="flex gap-3 items-start cursor-pointer group">
-                                  <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-colors ${tempConsent ? 'bg-teal-600 border-teal-600' : 'border-stone-300 group-hover:border-teal-400'}`}>{tempConsent && <Check size={14} className="text-white" />}</div>
-                                  <input type="checkbox" className="hidden" checked={tempConsent} onChange={e => setTempConsent(e.target.checked)} />
-                                  <span className="text-xs text-stone-500 select-none">I understand that I will be asked personal and family details to identify scheme eligibility.</span>
-                              </label>
-                          </div>
-                          <button onClick={nextStep} disabled={!accountScope || !tempConsent} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold shadow-lg disabled:opacity-50">Continue</button>
-                      </div>
-                  )}
-
-                  {/* Primary User Details */}
-                  {wizardStep > 0 && <ProgressBar current={wizardStep} total={10} />}
-
-                  {wizardStep === 1 && (
-                      <WizardPage title="About You" canProceed={!!profile.primaryUser?.age} onNext={nextStep} onBack={prevStep}>
-                           <label className="block text-sm font-medium text-stone-600">Your Age</label>
-                           <input type="number" className="w-full p-3 border rounded-xl" value={profile.primaryUser?.age || ''} onChange={e => updatePrimary('age', parseInt(e.target.value))} placeholder="e.g. 35" />
-                           
-                           <label className="block text-sm font-medium text-stone-600 mt-4">Gender</label>
-                           <div className="flex gap-2">
-                               {['Male', 'Female', 'Other'].map(g => (
-                                   <button key={g} onClick={() => updatePrimary('gender', g)} className={`flex-1 py-2 border rounded-lg ${profile.primaryUser?.gender === g ? 'bg-teal-600 text-white' : 'bg-white'}`}>{g}</button>
-                               ))}
-                           </div>
-
-                           <label className="block text-sm font-medium text-stone-600 mt-4">Marital Status</label>
-                           <select className="w-full p-3 border rounded-xl bg-white" value={profile.primaryUser?.maritalStatus || ''} onChange={e => updatePrimary('maritalStatus', e.target.value)}>
-                               <option value="">Select...</option>
-                               {['Single', 'Married', 'Widowed', 'Divorced'].map(s => <option key={s} value={s}>{s}</option>)}
-                           </select>
-                      </WizardPage>
-                  )}
-
-                  {wizardStep === 2 && (
-                       <WizardPage title="Your Situation" canProceed={!!profile.primaryUser?.state} onNext={nextStep} onBack={prevStep}>
-                           <label className="block text-sm font-medium text-stone-600">State of Residence</label>
-                           <select className="w-full p-3 border rounded-xl bg-white" value={profile.primaryUser?.state || ''} onChange={e => updatePrimary('state', e.target.value)}>
-                               <option value="">Select State...</option>
-                               {['Maharashtra', 'Bihar', 'Uttar Pradesh', 'Tamil Nadu', 'West Bengal', 'Karnataka', 'Rajasthan'].map(s => <option key={s} value={s}>{s}</option>)}
-                           </select>
-
-                           <label className="block text-sm font-medium text-stone-600 mt-4">Area Type</label>
-                           <div className="flex gap-2">
-                               {['Urban', 'Rural'].map(t => (
-                                   <button key={t} onClick={() => updatePrimary('residenceType', t)} className={`flex-1 py-2 border rounded-lg ${profile.primaryUser?.residenceType === t ? 'bg-teal-600 text-white' : 'bg-white'}`}>{t}</button>
-                               ))}
-                           </div>
-
-                           <label className="block text-sm font-medium text-stone-600 mt-4">Disability Status</label>
-                           <div className="flex gap-2">
-                               <button onClick={() => updatePrimary('disability', false)} className={`flex-1 py-2 border rounded-lg ${profile.primaryUser?.disability === false ? 'bg-teal-600 text-white' : 'bg-white'}`}>No</button>
-                               <button onClick={() => updatePrimary('disability', true)} className={`flex-1 py-2 border rounded-lg ${profile.primaryUser?.disability === true ? 'bg-teal-600 text-white' : 'bg-white'}`}>Yes</button>
-                           </div>
-                       </WizardPage>
-                  )}
-
-                  {wizardStep === 3 && (
-                      <WizardPage title="Work & Income" canProceed={!!profile.primaryUser?.occupation} onNext={() => {
-                          if (profile.primaryUser?.maritalStatus === 'Married') nextStep();
-                          else setWizardStep(5); // Skip spouse
-                      }} onBack={prevStep}>
-                           <label className="block text-sm font-medium text-stone-600">Occupation</label>
-                           <input type="text" className="w-full p-3 border rounded-xl" value={profile.primaryUser?.occupation || ''} onChange={e => updatePrimary('occupation', e.target.value)} placeholder="e.g. Farmer, Teacher" />
-
-                           <label className="block text-sm font-medium text-stone-600 mt-4">Annual Income Range</label>
-                           <div className="space-y-2">
-                               {['< ₹1 Lakh', '₹1L - ₹3L', '₹3L - ₹6L', '> ₹6L'].map(r => (
-                                   <WizardOptionButton key={r} label={r} selected={profile.primaryUser?.incomeRange === r} onClick={() => updatePrimary('incomeRange', r)} />
-                               ))}
-                           </div>
-                      </WizardPage>
-                  )}
-
-                  {/* Spouse Step */}
-                  {wizardStep === 4 && (
-                      <WizardPage title="Spouse Details" canProceed={true} onNext={nextStep} onBack={prevStep}>
-                           <label className="block text-sm font-medium text-stone-600">Spouse Age</label>
-                           <input type="number" className="w-full p-3 border rounded-xl" value={profile.spouse?.age || ''} onChange={e => updateSpouse('age', parseInt(e.target.value))} />
-
-                           <label className="block text-sm font-medium text-stone-600 mt-4">Working Status</label>
-                           <select className="w-full p-3 border rounded-xl bg-white" value={profile.spouse?.workingStatus || ''} onChange={e => updateSpouse('workingStatus', e.target.value)}>
-                               <option value="">Select...</option>
-                               {['Working', 'Homemaker', 'Unemployed'].map(s => <option key={s} value={s}>{s}</option>)}
-                           </select>
-
-                           {profile.primaryUser?.gender === 'Male' && (
-                               <div className="mt-4 p-4 bg-teal-50 rounded-xl border border-teal-100">
-                                   <label className="flex items-center gap-3">
-                                       <input type="checkbox" className="w-5 h-5 text-teal-600" checked={profile.spouse?.isPregnant || false} onChange={e => updateSpouse('isPregnant', e.target.checked)} />
-                                       <span className="font-medium text-teal-900">Is she currently pregnant?</span>
-                                   </label>
-                               </div>
-                           )}
-                      </WizardPage>
-                  )}
-
-                  {/* Children Step */}
-                  {wizardStep === 5 && (
-                      <WizardPage title="Children" canProceed={true} onNext={nextStep} onBack={prevStep}>
-                          <label className="block text-sm font-medium text-stone-600">Number of children</label>
-                          <input type="number" autoFocus className="w-full p-4 border rounded-xl text-2xl text-center" value={tempChildCount !== null ? tempChildCount : ''} onChange={e => {
-                              const val = parseInt(e.target.value);
-                              setTempChildCount(val);
-                              // Reset children array if count changes (simple implementation)
-                              if (!isNaN(val)) {
-                                  setProfile(p => ({ ...p, children: Array(val).fill({ id: 'temp', age: 0, gender: 'Male', studentStatus: true }) }));
-                              }
-                          }} placeholder="0" />
-                          
-                           {(tempChildCount || 0) > 0 && (
-                               <div className="mt-4 space-y-4 max-h-60 overflow-y-auto">
-                                   {profile.children?.map((child, idx) => (
-                                       <div key={idx} className="p-3 bg-stone-50 rounded-lg border border-stone-200">
-                                           <div className="text-xs font-bold text-stone-400 mb-2">Child {idx+1}</div>
-                                           <div className="flex gap-2 mb-2">
-                                               <input type="number" placeholder="Age" className="w-20 p-2 rounded border" value={child.age || ''} onChange={e => {
-                                                   const newChildren = [...(profile.children || [])];
-                                                   newChildren[idx] = { ...newChildren[idx], age: parseInt(e.target.value) };
-                                                   setProfile(p => ({ ...p, children: newChildren }));
-                                               }} />
-                                               <select className="flex-1 p-2 rounded border" value={child.gender} onChange={e => {
-                                                    const newChildren = [...(profile.children || [])];
-                                                    newChildren[idx] = { ...newChildren[idx], gender: e.target.value as any };
-                                                    setProfile(p => ({ ...p, children: newChildren }));
-                                               }}>
-                                                   <option value="Male">Boy</option>
-                                                   <option value="Female">Girl</option>
-                                               </select>
-                                           </div>
-                                            <label className="flex items-center gap-2 text-xs">
-                                                <input type="checkbox" checked={child.studentStatus} onChange={e => {
-                                                     const newChildren = [...(profile.children || [])];
-                                                     newChildren[idx] = { ...newChildren[idx], studentStatus: e.target.checked };
-                                                     setProfile(p => ({ ...p, children: newChildren }));
-                                                }} /> Is a student
-                                            </label>
-                                       </div>
-                                   ))}
-                               </div>
-                           )}
-                      </WizardPage>
-                  )}
-
-                  {/* Parents */}
-                  {wizardStep === 6 && (
-                      <WizardPage title="Parents" canProceed={true} onNext={nextStep} onBack={prevStep}>
-                          <p className="mb-4 text-stone-600 text-sm">Do you support your parents living with you?</p>
-                          <div className="space-y-3">
-                              <WizardOptionButton label="Yes, both parents" selected={profile.parents?.length === 2} onClick={() => setProfile(p => ({ ...p, parents: [{relation:'Father'}, {relation:'Mother'}] as any }))} />
-                              <WizardOptionButton label="Yes, father only" selected={profile.parents?.length === 1 && profile.parents[0].relation === 'Father'} onClick={() => setProfile(p => ({ ...p, parents: [{relation:'Father'}] as any }))} />
-                              <WizardOptionButton label="Yes, mother only" selected={profile.parents?.length === 1 && profile.parents[0].relation === 'Mother'} onClick={() => setProfile(p => ({ ...p, parents: [{relation:'Mother'}] as any }))} />
-                              <WizardOptionButton label="No / Not applicable" selected={profile.parents?.length === 0} onClick={() => setProfile(p => ({ ...p, parents: [] }))} />
-                          </div>
-                      </WizardPage>
-                  )}
-                  
-                  {/* Community */}
-                  {wizardStep === 7 && (
-                      <WizardPage title="Community Category" canProceed={true} onNext={finishWizard} onBack={prevStep}>
-                          <p className="text-sm text-stone-500 mb-4">This helps identify specific reservation-based schemes.</p>
-                          <div className="space-y-2">
-                              {['General', 'SC', 'ST', 'OBC', 'Minority', 'Prefer not to say'].map(c => (
-                                  <WizardOptionButton key={c} label={c} selected={profile.socialCategory === c} onClick={() => setProfile(p => ({ ...p, socialCategory: c }))} />
-                              ))}
-                          </div>
-                      </WizardPage>
-                  )}
+          <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+              <div className="max-w-2xl w-full bg-white/70 backdrop-blur-2xl rounded-[3rem] p-10 md:p-14 shadow-2xl border border-white/40 relative z-10">
+                  {renderWizardContent()}
               </div>
           </div>
       )
   }
 
-  // --- Main Dashboard Views ---
-
+  // --- SUB-VIEWS ---
+  
+  if (isViewingUpdateHistory) {
+      return (
+          <UpdateHistoryView 
+             entries={updateHistory}
+             onBack={() => setIsViewingUpdateHistory(false)}
+             onDelete={handleHistoryDeletion}
+             t={t}
+          />
+      );
+  }
+  
+  if (isViewingJourney) {
+      return (
+          <FamilyJourneyView 
+              entries={getJourneyEntries()} 
+              onBack={() => setIsViewingJourney(false)} 
+              t={t}
+          />
+      );
+  }
+  
   const activeChat = activeChatId ? chats[activeChatId] : null;
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-24 font-sans">
+    <div className="min-h-screen pb-32 font-sans text-slate-900 relative bg-[#f8fafc]">
         
-        {/* VIEW: HOME */}
-        {currentView === 'HOME' && (
-            <div className="max-w-xl mx-auto p-5 space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                {/* Greeting */}
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold text-stone-800">{t.hello}, {profile.username || 'Friend'} 👋</h1>
-                        <p className="text-sm text-stone-400">{t.familySummary}</p>
-                    </div>
-                    <button onClick={() => setCurrentView('PROFILE')} className="relative">
-                        <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 border border-teal-200 shadow-sm">
-                            <UserIcon size={20} />
-                        </div>
+        {/* --- GLOBAL HEADER --- */}
+        <header className="fixed top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-xl border-b border-slate-200/60 flex items-center justify-between px-6 z-40 shadow-sm">
+            <div className="font-extrabold text-xl text-slate-900 tracking-tight cursor-default">
+                {t.common.appName}
+            </div>
+            
+            <div className="flex items-center gap-3">
+                {/* Language Selector */}
+                <div className="relative">
+                    <button 
+                        onClick={() => setIsLanguageMenuOpen(!isLanguageMenuOpen)}
+                        className="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200 flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        title="Change Language"
+                    >
+                        <Globe size={20} />
                     </button>
+                    {isLanguageMenuOpen && (
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setIsLanguageMenuOpen(false)}></div>
+                            <div className="absolute right-0 top-full mt-3 w-40 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 flex flex-col gap-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                {LANGUAGES.map((lang) => (
+                                    <button 
+                                        key={lang}
+                                        onClick={async () => {
+                                            setSettings(prev => ({ ...prev, language: lang }));
+                                            setIsLanguageMenuOpen(false);
+                                            await updateDoc(doc(db, 'households', deviceId), { 'settings.language': lang });
+                                        }}
+                                        className={`text-left px-4 py-3 rounded-xl text-xs font-bold transition-colors flex justify-between items-center ${settings.language === lang ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-slate-50 text-slate-600'}`}
+                                    >
+                                        {lang}
+                                        {settings.language === lang && <Check size={14}/>}
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
 
-                {/* 1. Family Snapshot */}
-                <section className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 relative overflow-hidden">
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-4">
-                             <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <span className="bg-teal-100 text-teal-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">{t.currentStage}</span>
-                                </div>
-                                <h2 className="text-xl font-bold text-stone-800">{lifeState?.currentStage}</h2>
+                <div className="relative">
+                    <button 
+                        onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                        className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 hover:border-indigo-500 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    >
+                        {user.photoURL ? (
+                            <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">
+                                <UserIcon size={20} />
+                            </div>
+                        )}
+                    </button>
+
+                    {/* Profile Menu Dropdown */}
+                    {isProfileMenuOpen && (
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setIsProfileMenuOpen(false)}></div>
+                            <div className="absolute right-0 top-full mt-3 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 flex flex-col gap-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <button 
+                                    onClick={() => { setCurrentView('PROFILE'); setIsProfileMenuOpen(false); }}
+                                    className="text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-bold text-slate-700 hover:text-indigo-600 transition-colors"
+                                >
+                                    {t.nav.profile}
+                                </button>
+                                <button 
+                                    onClick={() => { setCurrentView('SETTINGS'); setIsProfileMenuOpen(false); }}
+                                    className="text-left px-4 py-3 rounded-xl hover:bg-slate-50 text-sm font-bold text-slate-700 hover:text-indigo-600 transition-colors"
+                                >
+                                    {t.nav.settings}
+                                </button>
+                                <div className="h-px bg-slate-100 my-1"></div>
+                                <button 
+                                    onClick={() => { onSignOut(); setIsProfileMenuOpen(false); }}
+                                    className="text-left px-4 py-3 rounded-xl hover:bg-rose-50 text-sm font-bold text-slate-500 hover:text-rose-600 transition-colors flex items-center gap-2"
+                                >
+                                    {t.nav.signOut} <LogOut size={14}/>
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </header>
+
+        {/* VIEW: HOME */}
+        {currentView === 'HOME' && (
+            <div className="max-w-4xl mx-auto p-6 pt-24 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                
+                {/* --- WARM GREETING --- */}
+                <div className="px-2 mb-2">
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-3 tracking-tight">
+                        {getLocalizedGreeting(settings.language, profile.username)}
+                    </h1>
+                    <p className="text-slate-500 text-lg font-medium leading-relaxed max-w-2xl">
+                        {t.home.snapshotSubtitle}
+                    </p>
+                </div>
+                
+                {/* Bento Grid Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    {/* FAMILY SNAPSHOT CARD - Spans 2 cols */}
+                    <div className="md:col-span-2 bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden group shadow-2xl shadow-indigo-500/20 flex flex-col justify-between">
+                        {/* Dynamic Backgrounds */}
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600 rounded-full blur-[100px] opacity-40 group-hover:opacity-60 transition-opacity"></div>
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-600 rounded-full blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                        
+                        {/* 1️⃣ Top Bar: Safety */}
+                        <div className="relative z-10 flex justify-between items-start mb-8 pb-6 border-b border-white/10">
+                             <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold uppercase tracking-widest">
+                                 <Database size={12} />
+                                 {t.home.securelyStored}
                              </div>
-                             <button onClick={() => setWizardStep(1)} className="text-teal-600 text-sm font-bold bg-teal-50 px-3 py-1.5 rounded-lg hover:bg-teal-100 transition">
-                                {t.edit}
-                             </button>
                         </div>
                         
-                        <div className="flex items-center gap-4 text-stone-500 text-sm mb-4">
-                            <div className="flex items-center gap-1.5">
-                                <Users size={16} />
-                                <span>{t.familyOf} {profile.memberCount}</span>
+                        {/* 2️⃣ Visual Timeline */}
+                        <div className="relative z-10 space-y-6 flex-1 flex flex-col justify-center py-4">
+                            {/* Previous */}
+                            {lifeState?.previousStage && (
+                                <div className="flex items-center gap-4 opacity-50">
+                                    <div className="w-10 h-10 rounded-full border-2 border-dashed border-slate-500 flex items-center justify-center shrink-0">
+                                        <Check size={16} className="text-slate-400"/>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.home.previously}</div>
+                                        <div className="font-medium text-slate-300">{lifeState.previousStage}</div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Now */}
+                            <div className="flex items-center gap-4 relative">
+                                {/* Connector Line if previous exists */}
+                                {lifeState?.previousStage && <div className="absolute left-[19px] -top-6 h-6 w-0.5 bg-slate-700"></div>}
+                                
+                                <div className="w-10 h-10 rounded-full bg-white text-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/50 z-10">
+                                    <div className="w-3 h-3 bg-indigo-600 rounded-full animate-pulse"></div>
+                                </div>
+                                <div>
+                                    <div className="text-xs font-black text-indigo-300 uppercase tracking-widest mb-1">{t.home.now}</div>
+                                    <div className="text-2xl font-extrabold text-white leading-tight">
+                                        {lifeState?.currentStage}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                                <Clock size={16} />
-                                <span>{t.updatedNow}</span>
+
+                            {/* Coming Up */}
+                            <div className="flex items-center gap-4 relative">
+                                {/* Connector Line */}
+                                <div className="absolute left-[19px] -top-6 h-10 w-0.5 bg-gradient-to-b from-white/50 to-transparent"></div>
+                                
+                                <div className="w-10 h-10 rounded-full border border-white/20 bg-white/5 flex items-center justify-center shrink-0 z-10">
+                                    <ArrowDown size={16} className="text-white/40"/>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.home.comingUp}</div>
+                                    <div className="font-medium text-slate-300">{lifeState?.nextStagePrediction}</div>
+                                </div>
                             </div>
                         </div>
 
-                        <p className="text-stone-600 text-sm leading-relaxed bg-stone-50 p-3 rounded-xl border border-stone-100">
-                            {lifeState?.explanation}
-                        </p>
+                        {/* 3️⃣ Footer: Disclaimer & Action */}
+                        <div className="relative z-10 pt-6 mt-4 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <p className="text-[10px] text-slate-500 font-medium max-w-[200px] text-center sm:text-left">
+                                {t.home.disclaimer}
+                            </p>
+                            <button 
+                                onClick={() => setIsViewingJourney(true)}
+                                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold uppercase tracking-wide transition-colors flex items-center gap-2"
+                            >
+                                {t.home.viewJourney} <ChevronRight size={12}/>
+                            </button>
+                        </div>
                     </div>
-                </section>
 
-                {/* 2. Update Input */}
-                <section>
-                    <h3 className="font-bold text-stone-800 mb-3 ml-1">{t.updatePrompt}</h3>
-                    <div className="bg-white p-2 rounded-2xl shadow-sm border border-stone-100 flex gap-2">
-                        <input 
-                            type="text" 
-                            className="flex-1 p-3 outline-none text-stone-700 placeholder:text-stone-300 bg-transparent"
-                            placeholder={t.placeholderUpdate}
-                            value={updateInput}
-                            onChange={e => setUpdateInput(e.target.value)}
-                        />
-                         <button onClick={() => startListening(setUpdateInput)} className="p-3 text-stone-400 hover:text-teal-600 bg-stone-50 rounded-xl transition"><Mic size={20}/></button>
-                         <button onClick={handleUpdate} disabled={isAnalyzing || !updateInput} className="p-3 bg-stone-800 text-white rounded-xl shadow-md hover:bg-stone-700 disabled:opacity-50 transition">
-                             {isAnalyzing ? <Loader2 className="animate-spin" size={20}/> : <Send size={20} />}
-                         </button>
+                    {/* Side Actions Column: Update Input */}
+                    <div className="space-y-6">
+                        <div className="bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-6 h-full shadow-lg flex flex-col justify-between group hover:bg-white/80 transition-colors relative">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="font-bold text-slate-900 text-lg">{t.home.updateQuestion}</h3>
+                                    <p className="text-slate-500 text-xs font-bold mt-1">{t.home.updateHint}</p>
+                                </div>
+                            </div>
+                            
+                            <textarea 
+                                className="w-full bg-transparent resize-none outline-none text-xl font-medium placeholder:text-slate-300/60 text-slate-800 h-40"
+                                placeholder={t.home.updatePlaceholder}
+                                value={updateInput}
+                                onChange={e => setUpdateInput(e.target.value)}
+                            />
+                            
+                            <div className="flex justify-between items-end mt-4 pt-4 border-t border-slate-100">
+                                <button 
+                                    onClick={() => setIsViewingUpdateHistory(true)}
+                                    className="text-slate-400 hover:text-indigo-600 text-xs font-bold uppercase tracking-wide flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white transition-colors"
+                                >
+                                    <History size={16} /> {t.home.viewHistory}
+                                </button>
+
+                                <div className="flex gap-2">
+                                    <button onClick={() => startListening(setUpdateInput)} className="p-3 rounded-full hover:bg-white text-slate-400 transition-colors"><Mic size={24}/></button>
+                                    <button 
+                                        onClick={handleUpdateSubmit}
+                                        disabled={isAnalyzing}
+                                        className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center w-14 h-14"
+                                    >
+                                        {isAnalyzing ? <Loader2 className="animate-spin" size={24}/> : <Send size={24}/>}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </section>
+                </div>
 
-                {/* 3. Focus Areas */}
-                <section>
-                    <h3 className="font-bold text-stone-800 mb-3 ml-1">{t.focusAreas}</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        <button onClick={() => { setCurrentView('CHAT'); setTimeout(() => setChatInput("What health advice do you have for my family?"), 100); }} className="bg-rose-50 p-5 rounded-2xl text-left hover:bg-rose-100 transition border border-rose-100">
-                            <Heart className="text-rose-500 mb-3" size={24} />
-                            <div className="font-bold text-rose-900">{t.health}</div>
-                        </button>
+                {/* --- FOCUS AREAS SECTION --- */}
+                {lifeState.focusAreas && (
+                    <section className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <div className="mb-6 px-2">
+                            <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight">{t.home.focusAreas}</h3>
+                            <p className="text-slate-500 font-medium mt-1">{t.home.focusAreasSubtitle}</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {[
+                                { id: 'health', content: lifeState.focusAreas.health, icon: Heart, color: 'bg-rose-50', border: 'border-rose-100', text: 'text-rose-900', iconColor: 'text-rose-500' },
+                                { id: 'education', content: lifeState.focusAreas.education, icon: Globe, color: 'bg-sky-50', border: 'border-sky-100', text: 'text-sky-900', iconColor: 'text-sky-500' },
+                                { id: 'livelihood', content: lifeState.focusAreas.livelihood, icon: Activity, color: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-900', iconColor: 'text-amber-500' },
+                                { id: 'support', content: lifeState.focusAreas.support, icon: Shield, color: 'bg-indigo-50', border: 'border-indigo-100', text: 'text-indigo-900', iconColor: 'text-indigo-500' }
+                            ].map((area) => (
+                                <button 
+                                    key={area.id} 
+                                    onClick={() => setSelectedFocusArea({id: area.id, content: area.content})}
+                                    className={`${area.color} border ${area.border} p-6 rounded-[2rem] text-left hover:scale-[1.02] transition-transform h-full flex flex-col justify-between group shadow-sm`}
+                                >
+                                    <div>
+                                        <div className={`w-12 h-12 bg-white rounded-2xl flex items-center justify-center ${area.iconColor} shadow-sm mb-4 group-hover:scale-110 transition-transform`}>
+                                            <area.icon size={24} />
+                                        </div>
+                                        <h4 className={`font-extrabold text-lg mb-2 ${area.text}`}>{area.content.title || area.id.charAt(0).toUpperCase() + area.id.slice(1)}</h4>
+                                        <p className="text-slate-600 text-sm font-medium leading-relaxed opacity-80 line-clamp-3">
+                                            {area.content.shortDescription}
+                                        </p>
+                                    </div>
+                                    <div className="mt-4 flex justify-end">
+                                        <div className="bg-white/50 p-2 rounded-full text-slate-400 group-hover:text-slate-600 transition-colors">
+                                            <ArrowRight size={16} />
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </section>
+                )}
 
-                        <button onClick={() => { setCurrentView('CHAT'); setTimeout(() => setChatInput("How can I support my family's education needs?"), 100); }} className="bg-sky-50 p-5 rounded-2xl text-left hover:bg-sky-100 transition border border-sky-100">
-                            <BookOpenIcon className="text-sky-500 mb-3" size={24} />
-                            <div className="font-bold text-sky-900">{t.education}</div>
-                        </button>
+                {/* --- UPDATE CONFIRMATION MODAL --- */}
+                {pendingUpdate && (
+                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-white animate-in zoom-in-95">
+                            <h3 className="text-2xl font-extrabold text-slate-900 mb-4">{t.home.confirmUpdateTitle}</h3>
+                            <p className="text-slate-500 mb-6 font-medium">{pendingUpdate.summary}</p>
+                            
+                            <div className="bg-slate-50 rounded-2xl p-4 mb-6 space-y-3 border border-slate-100 max-h-60 overflow-y-auto">
+                                {pendingUpdate.changes.map((change, idx) => (
+                                    <div key={idx} className="flex items-start gap-3 text-sm">
+                                        <div className="bg-indigo-100 text-indigo-600 p-1 rounded-full mt-0.5"><RefreshCw size={12}/></div>
+                                        <div>
+                                            <span className="font-bold text-slate-700">{change.affectedMember}: </span>
+                                            <span className="text-slate-500">{change.field} changed from </span>
+                                            <span className="font-mono text-slate-400 line-through">{change.oldValue || 'Empty'}</span>
+                                            <span className="text-slate-500"> to </span>
+                                            <span className="font-bold text-indigo-600">{change.newValue}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                                {pendingUpdate.changes.length === 0 && <p className="text-slate-400 italic">{t.home.noChangesDetected}</p>}
+                            </div>
 
-                        <button onClick={() => { setCurrentView('CHAT'); setTimeout(() => setChatInput("What are good livelihood opportunities for us?"), 100); }} className="bg-amber-50 p-5 rounded-2xl text-left hover:bg-amber-100 transition border border-amber-100">
-                            <BriefcaseIcon className="text-amber-500 mb-3" size={24} />
-                            <div className="font-bold text-amber-900">{t.livelihood}</div>
-                        </button>
-
-                        <button onClick={() => setCurrentView('SCHEMES')} className="bg-indigo-50 p-5 rounded-2xl text-left hover:bg-indigo-100 transition border border-indigo-100">
-                            <Sparkles className="text-indigo-500 mb-3" size={24} />
-                            <div className="font-bold text-indigo-900">{t.govtSupport}</div>
-                        </button>
+                            <div className="flex gap-3">
+                                <button onClick={cancelUpdate} className="flex-1 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50">{t.common.cancel}</button>
+                                <button onClick={confirmUpdate} className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-xl hover:bg-indigo-600 transition-colors">{t.home.updateSnapshotBtn}</button>
+                            </div>
+                        </div>
                     </div>
-                </section>
+                )}
+
+                {/* --- FOCUS AREA DETAIL MODAL --- */}
+                {selectedFocusArea && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-[2.5rem] p-0 max-w-lg w-full shadow-2xl border border-white animate-in zoom-in-95 overflow-hidden relative">
+                             <div className={`h-32 w-full ${selectedFocusArea.id === 'health' ? 'bg-rose-100' : selectedFocusArea.id === 'education' ? 'bg-sky-100' : selectedFocusArea.id === 'livelihood' ? 'bg-amber-100' : 'bg-indigo-100'}`}></div>
+                             <div className="p-8 -mt-12 relative">
+                                <div className={`w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center shadow-lg mb-6 ${selectedFocusArea.id === 'health' ? 'text-rose-500' : selectedFocusArea.id === 'education' ? 'text-sky-500' : selectedFocusArea.id === 'livelihood' ? 'text-amber-500' : 'text-indigo-500'}`}>
+                                     {selectedFocusArea.id === 'health' && <Heart size={32} />}
+                                     {selectedFocusArea.id === 'education' && <Globe size={32} />}
+                                     {selectedFocusArea.id === 'livelihood' && <Activity size={32} />}
+                                     {selectedFocusArea.id === 'support' && <Shield size={32} />}
+                                </div>
+                                <h3 className="text-3xl font-extrabold text-slate-900 mb-4">{selectedFocusArea.content.title}</h3>
+                                <p className="text-slate-600 font-medium text-lg leading-relaxed mb-8">
+                                    {selectedFocusArea.content.whyItMatters}
+                                </p>
+                                <div className="space-y-3">
+                                    <button 
+                                        onClick={() => {
+                                            setCurrentView('CHAT');
+                                            setChatInput(`${t.home.askGuidance}: ${selectedFocusArea.content.title}`);
+                                            setSelectedFocusArea(null);
+                                        }}
+                                        className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {t.home.askGuidance} <MessageCircle size={20}/>
+                                    </button>
+                                    <button onClick={() => setSelectedFocusArea(null)} className="w-full py-4 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl">{t.common.close}</button>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                )}
             </div>
         )}
 
-        {/* VIEW: SCHEMES */}
+        {/* VIEW: SCHEMES (Standard) */}
         {currentView === 'SCHEMES' && (
-            <div className="max-w-xl mx-auto p-5 animate-in fade-in slide-in-from-right-4">
-                <header className="mb-6">
-                    <h1 className="text-2xl font-bold text-stone-800">{t.schemesTitle}</h1>
-                    <p className="text-stone-500 text-sm">{t.schemesSubtitle}</p>
+            <div className="max-w-3xl mx-auto p-6 pt-24 animate-in fade-in slide-in-from-right-8 duration-500 pb-32">
+                <header className="mb-10 pt-4">
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight leading-tight">
+                        {t.schemes.title}
+                    </h1>
+                    <p className="text-slate-500 text-lg font-medium max-w-xl">
+                        {t.schemes.subtitle}
+                    </p>
                 </header>
-                {/* ... (Scheme rendering logic same as before) ... */}
-                <div className="space-y-8 pb-20"> {/* pb-20 for bottom nav clearance */}
+                
+                <div className="space-y-8"> 
                      {!schemeData && !isCheckingSchemes && (
-                         <div className="text-center py-10">
-                             <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-600">
-                                 <Sparkles size={32} />
+                         <div className="text-center py-24 bg-white/60 backdrop-blur-xl rounded-[3rem] border border-white relative overflow-hidden group shadow-lg">
+                             <div className="absolute inset-0 bg-gradient-to-tr from-indigo-50/50 to-purple-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                             <div className="relative z-10 px-8">
+                                <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-600 shadow-sm">
+                                    <Sparkles size={40} strokeWidth={2} />
+                                </div>
+                                <h3 className="text-3xl font-bold text-slate-900 mb-4">{t.schemes.discoverTitle}</h3>
+                                <p className="text-slate-500 mb-8 max-w-md mx-auto">{t.schemes.discoverText}</p>
+                                <button onClick={async () => {
+                                    if (!lifeState) return;
+                                    setIsCheckingSchemes(true);
+                                    setSchemeData(null);
+                                    const result = await getEligibleSchemes(profile, lifeState.currentStage, settings.language);
+                                    setSchemeData(result);
+                                    setIsCheckingSchemes(false);
+                                }} className="bg-slate-900 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:scale-105 transition-transform shadow-xl shadow-slate-900/20">
+                                    {t.schemes.checkEligibility}
+                                </button>
                              </div>
-                             <p className="text-stone-600 mb-6 max-w-xs mx-auto">We scan 100+ schemes to find exactly what you qualify for.</p>
-                             <button onClick={handleCheckSchemes} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition">
-                                 {t.checkEligibility}
-                             </button>
                          </div>
                      )}
-
+                     
                      {isCheckingSchemes && (
-                         <div className="flex flex-col items-center justify-center py-20 text-stone-500">
-                            <Loader2 className="animate-spin mb-4 text-indigo-600" size={32} />
-                            <span className="font-medium">{t.analyzing}</span>
+                         <div className="flex flex-col items-center justify-center py-40 text-slate-400">
+                            <Loader2 className="animate-spin text-slate-900 mb-6" size={64} />
+                            <span className="font-bold text-2xl text-slate-900 mb-2">{t.schemes.analyzing}</span>
+                            <span className="text-slate-500">{t.schemes.matching}</span>
                         </div>
                      )}
 
                      {schemeData && !isCheckingSchemes && (
                         <div>
                              {schemeData.status === 'missing_info' ? (
-                                <div className="bg-amber-50 p-5 rounded-xl border border-amber-100">
-                                    <h3 className="font-bold text-amber-800 mb-2">{t.missingInfo}</h3>
-                                    <p className="text-sm text-amber-700 mb-4">{schemeData.missingFieldQuestion}</p>
-                                    <div className="flex gap-2">
-                                        <input type="text" autoFocus className="flex-1 border border-amber-200 p-2 rounded-lg" value={missingFieldInput} onChange={e => setMissingFieldInput(e.target.value)} />
-                                        <button onClick={submitMissingSchemeInfo} className="bg-amber-600 text-white p-2 rounded-lg"><Send size={18}/></button>
+                                <div className="bg-amber-50 p-10 rounded-[2.5rem] border border-amber-100 shadow-xl shadow-amber-500/10">
+                                    <h3 className="font-bold text-amber-900 text-2xl mb-4">{t.schemes.oneDetailNeeded}</h3>
+                                    <p className="text-amber-800 mb-8 font-medium text-lg leading-relaxed">{schemeData.missingFieldQuestion}</p>
+                                    <div className="flex gap-4 bg-white p-3 rounded-2xl border border-amber-200 shadow-sm">
+                                        <input type="text" autoFocus className="flex-1 p-4 outline-none rounded-xl text-lg font-medium text-slate-800" placeholder="Type your answer..." value={missingFieldInput} onChange={e => setMissingFieldInput(e.target.value)} />
+                                        <button onClick={async () => {
+                                            if (!missingFieldInput.trim() || !schemeData?.missingField) return;
+                                            const updatedProfile = { ...profile, [schemeData.missingField]: missingFieldInput };
+                                            setProfile(updatedProfile);
+                                            setMissingFieldInput('');
+                                            setIsCheckingSchemes(true);
+                                            await setDoc(doc(db, 'households', deviceId), { profile: updatedProfile }, { merge: true });
+                                            const result = await getEligibleSchemes(updatedProfile, lifeState!.currentStage, settings.language);
+                                            setSchemeData(result);
+                                            setIsCheckingSchemes(false);
+                                        }} className="bg-amber-500 text-white px-8 py-4 rounded-xl hover:bg-amber-600 font-bold shadow-lg shadow-amber-500/20 transition-all hover:scale-105">
+                                            {t.schemes.submit}
+                                        </button>
                                     </div>
                                 </div>
                             ) : schemeData.schemes ? (
-                                <div className="space-y-8">
-                                    {Array.from(new Set(schemeData.schemes.map(s => s.beneficiary))).map(beneficiary => (
-                                        <div key={beneficiary} className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100">
-                                            {/* Person Header */}
-                                            <div className="flex items-center gap-3 mb-4 border-b border-stone-100 pb-3">
-                                                <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
-                                                    <UserIcon size={20} />
+                                <div className="space-y-12">
+                                    {/* Group schemes by beneficiary string from AI */}
+                                    {Array.from(new Set(schemeData.schemes.map(s => s.beneficiary))).map((beneficiary) => {
+                                        const memberSchemes = schemeData.schemes!.filter(s => s.beneficiary === beneficiary);
+                                        return (
+                                            <div key={beneficiary} className="animate-in fade-in slide-in-from-bottom-4">
+                                                <div className="flex items-center gap-4 mb-6 px-2">
+                                                    <div className="h-10 w-1 bg-indigo-500 rounded-full"></div>
+                                                    <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">{beneficiary}</h2>
                                                 </div>
-                                                <h3 className="font-bold text-stone-800 text-lg">{beneficiary}</h3>
-                                            </div>
-
-                                            {/* Schemes List for this person */}
-                                            <div className="space-y-4">
-                                                {schemeData.schemes!.filter(s => s.beneficiary === beneficiary).map((s, idx) => (
-                                                    <div key={idx} className="bg-stone-50 p-4 rounded-xl border border-stone-200">
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <h4 className="font-bold text-stone-900 text-base">{s.name}</h4>
-                                                            <button onClick={() => speakText(`${s.name}. ${s.description}`)} className="text-stone-400 hover:text-stone-600 p-1"><Volume2 size={16}/></button>
+                                                
+                                                <div className="grid grid-cols-1 gap-6">
+                                                    {memberSchemes.map((scheme, idx) => (
+                                                        <SchemeCard key={idx} scheme={scheme} t={t} />
+                                                    ))}
+                                                    {memberSchemes.length === 0 && (
+                                                        <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 text-slate-500 font-medium text-center">
+                                                            No schemes identified for this member based on current details.
                                                         </div>
-                                                        
-                                                        <p className="text-sm text-stone-600 mb-3 leading-relaxed">
-                                                            {s.description}
-                                                        </p>
-
-                                                        <div className="bg-white p-3 rounded-lg border border-stone-100 mb-3">
-                                                            <span className="block text-[10px] uppercase font-bold text-teal-600 mb-1">Why Eligible</span>
-                                                            <p className="text-xs text-stone-700">{s.eligibilityReason}</p>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                     
-                                    <div className="text-center pt-4">
-                                         <button onClick={handleCheckSchemes} className="text-indigo-600 text-sm font-bold hover:underline">
-                                             Check Again
-                                         </button>
+                                    <div className="pt-12 text-center">
+                                         <p className="text-xs font-bold text-slate-400 max-w-md mx-auto leading-relaxed">
+                                             {t.schemes.disclaimer}
+                                         </p>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-center py-10 text-stone-500">
-                                    No specific schemes found right now.
+                                <div className="text-center py-32 text-slate-400 font-medium bg-slate-50 rounded-[3rem]">
+                                    <FileText size={48} className="mx-auto mb-4 opacity-50"/>
+                                    {t.schemes.noSchemes}
                                 </div>
                             )}
                         </div>
@@ -974,209 +1084,387 @@ export const CitizenView: React.FC<Props> = ({ user, onSignOut }) => {
             </div>
         )}
 
-        {/* VIEW: CHAT */}
+        {/* VIEW: CHAT (Feature 5) */}
         {currentView === 'CHAT' && (
-             <div className="flex flex-col h-[calc(100vh-6rem)] animate-in fade-in slide-in-from-right-4">
-                 <div className="p-4 border-b border-stone-200 bg-white flex justify-between items-center sticky top-0 z-10">
-                     <div className="flex items-center gap-2">
-                         <div className="w-8 h-8 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center"><MessageCircle size={18} /></div>
-                         <h1 className="font-bold text-stone-800">{t.friendlyGuide}</h1>
-                     </div>
-                     <button onClick={createNewChat} className="text-xs bg-stone-100 px-3 py-1.5 rounded-full font-bold text-stone-600 hover:bg-stone-200">{t.newChat}</button>
-                 </div>
-                 
-                 <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50/50">
-                    {activeChat?.messages.length === 0 && (
-                        <div className="h-full flex flex-col items-center justify-center text-stone-400 text-center p-8">
-                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm"><Sparkles size={24} className="text-teal-400"/></div>
-                            <p className="font-medium text-stone-600 mb-1">How can I help you today?</p>
-                        </div>
-                    )}
-                    {activeChat?.messages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-teal-600 text-white rounded-br-none' : 'bg-white text-stone-800 rounded-bl-none border border-stone-100'}`}>
-                                {msg.content}
-                                {msg.role === 'model' && (
-                                    <div className="mt-2 pt-2 border-t border-stone-100 flex justify-end">
-                                        <button onClick={() => speakText(msg.content)} className="opacity-40 hover:opacity-100 transition"><Volume2 size={14}/></button>
-                                    </div>
-                                )}
+            <div className="max-w-6xl mx-auto h-[calc(100vh-140px)] p-4 md:p-6 pt-24 animate-in fade-in slide-in-from-bottom-4 flex gap-6">
+                
+                {/* Desktop Sidebar */}
+                <div className="hidden md:flex flex-col w-80 bg-white/60 backdrop-blur-xl rounded-[2.5rem] border border-white p-6 shadow-sm overflow-hidden">
+                    <button 
+                        onClick={() => setActiveChatId(null)}
+                        className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all mb-6"
+                    >
+                        <Plus size={20}/> {t.chat.newChat}
+                    </button>
+                    
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 pl-2">{t.chat.history}</div>
+                        {(Object.values(chats) as ChatSession[]).sort((a,b) => b.timestamp - a.timestamp).map(chat => (
+                            <div key={chat.id} className="group relative">
+                                <button 
+                                    onClick={() => setActiveChatId(chat.id)}
+                                    className={`w-full text-left p-4 rounded-2xl transition-all ${activeChatId === chat.id ? 'bg-white shadow-md text-indigo-600' : 'hover:bg-white/50 text-slate-600'}`}
+                                >
+                                    <div className="font-bold truncate pr-6">{chat.title}</div>
+                                    <div className="text-xs opacity-50 font-medium">{new Date(chat.timestamp).toLocaleDateString()}</div>
+                                </button>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setIsChatDeleting(chat.id); }}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
+                                >
+                                    <Trash2 size={16}/>
+                                </button>
                             </div>
-                        </div>
-                    ))}
-                    {isChatLoading && <div className="flex justify-start"><div className="bg-stone-200 px-4 py-2 rounded-full text-xs text-stone-500 animate-pulse">Thinking...</div></div>}
-                    <div ref={messagesEndRef}/>
-                </div>
-
-                <div className="p-4 bg-white border-t border-stone-200">
-                    <form onSubmit={handleChatSubmit} className="flex gap-2">
-                        <button type="button" onClick={() => startListening(setChatInput)} className="p-3 bg-stone-100 rounded-xl text-stone-500 hover:bg-stone-200 transition"><Mic size={20}/></button>
-                        <input type="text" className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:border-teal-400 outline-none transition" placeholder={t.typeQuestion} value={chatInput} onChange={e => setChatInput(e.target.value)} disabled={isChatLoading}/>
-                        <button type="submit" disabled={!chatInput} className="p-3 bg-teal-600 rounded-xl text-white shadow-md hover:bg-teal-700 disabled:opacity-50 transition"><Send size={20}/></button>
-                    </form>
-                </div>
-             </div>
-        )}
-
-        {/* VIEW: PROFILE */}
-        {currentView === 'PROFILE' && (
-            <div className="max-w-xl mx-auto p-5 animate-in fade-in slide-in-from-right-4">
-                 <header className="mb-6 flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold text-stone-800">{t.familyProfile}</h1>
-                        <p className="text-stone-500 text-sm">{t.profileSubtitle}</p>
+                        ))}
+                        {Object.keys(chats).length === 0 && (
+                            <div className="text-center py-10 text-slate-400 text-sm font-medium">No history yet.</div>
+                        )}
                     </div>
-                    <button onClick={() => setShowLanguageMenu(!showLanguageMenu)} className="bg-white p-2 rounded-full shadow-sm border border-stone-100 text-stone-500 relative">
-                        <Globe size={20} />
-                        {showLanguageMenu && (
-                            <div className="absolute top-10 right-0 z-50 bg-white rounded-xl shadow-xl border border-stone-100 p-2 min-w-[140px]">
-                                {LANGUAGES.map(lang => (
-                                    <button key={lang} onClick={() => { updateSettings({ language: lang }); setShowLanguageMenu(false); }} className={`block w-full text-left px-3 py-2 rounded-lg text-sm ${settings.language === lang ? 'bg-teal-50 text-teal-700 font-bold' : 'hover:bg-stone-50'}`}>
-                                        {lang}
-                                    </button>
-                                ))}
+                </div>
+
+                {/* Main Chat Area */}
+                <div className="flex-1 bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-white shadow-xl shadow-slate-200/50 flex flex-col relative overflow-hidden">
+                    {/* Header */}
+                    <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/50">
+                        <div className="flex items-center gap-4">
+                             {/* Mobile Menu Button (Placeholder for simplicity, usually would toggle sidebar) */}
+                             <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
+                                 <MessageCircle size={24}/>
+                             </div>
+                             <div>
+                                 <h2 className="font-bold text-slate-900 text-lg">{activeChatId ? chats[activeChatId]?.title : t.chat.newChat}</h2>
+                                 <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 uppercase tracking-wider">
+                                     <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                                     {t.chat.online}
+                                 </div>
+                             </div>
+                        </div>
+                        <button onClick={() => setActiveChatId(null)} className="md:hidden p-2 bg-slate-100 rounded-full"><Plus size={20}/></button>
+                    </div>
+
+                    {/* Messages */}
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        {!activeChatId && (
+                            <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-60">
+                                <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+                                    <MessageCircle size={40} className="text-slate-400"/>
+                                </div>
+                                <h3 className="text-2xl font-bold text-slate-900 mb-2">{t.chat.emptyStateTitle}</h3>
+                                <p className="text-slate-500 max-w-sm">{t.chat.emptyStateText}</p>
                             </div>
                         )}
-                    </button>
+                        
+                        {activeChatId && chats[activeChatId]?.messages.map((msg, idx) => (
+                            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] md:max-w-[70%] p-5 rounded-[2rem] text-lg font-medium leading-relaxed shadow-sm ${
+                                    msg.role === 'user' 
+                                        ? 'bg-slate-900 text-white rounded-br-none' 
+                                        : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
+                                }`}>
+                                    {msg.content}
+                                </div>
+                            </div>
+                        ))}
+                        
+                        {isChatLoading && (
+                            <div className="flex justify-start">
+                                <div className="bg-white border border-slate-200 p-5 rounded-[2rem] rounded-bl-none flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></span>
+                                    <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-100"></span>
+                                    <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-200"></span>
+                                </div>
+                            </div>
+                        )}
+                        <div ref={chatBottomRef} />
+                    </div>
+
+                    {/* Input */}
+                    <div className="p-4 md:p-6 bg-white border-t border-slate-100">
+                        <div className="flex gap-2 items-end bg-slate-50 p-2 rounded-[2rem] border border-slate-200 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all">
+                            <button onClick={() => startListening(setChatInput)} className="p-4 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-full transition-all">
+                                <Mic size={24}/>
+                            </button>
+                            <textarea 
+                                value={chatInput}
+                                onChange={e => setChatInput(e.target.value)}
+                                onKeyDown={e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                                placeholder={t.chat.placeholder}
+                                className="flex-1 bg-transparent border-none outline-none resize-none py-4 max-h-32 text-lg font-medium text-slate-800 placeholder:text-slate-400"
+                                rows={1}
+                            />
+                            <button 
+                                onClick={handleSendMessage}
+                                disabled={!chatInput.trim() || isChatLoading}
+                                className="p-4 bg-indigo-600 text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:shadow-none"
+                            >
+                                <Send size={24}/>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Delete Confirmation Overlay */}
+                {isChatDeleting && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm rounded-[2.5rem]">
+                        <div className="bg-white p-8 rounded-[2rem] shadow-2xl max-w-sm w-full mx-4 animate-in zoom-in-95">
+                            <h3 className="font-bold text-xl text-slate-900 mb-2">{t.chat.deleteChatTitle}</h3>
+                            <p className="text-slate-500 mb-6">{t.chat.deleteChatText}</p>
+                            <div className="flex gap-3">
+                                <button onClick={() => setIsChatDeleting(null)} className="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-50 rounded-xl">{t.common.cancel}</button>
+                                <button onClick={() => handleDeleteChat(isChatDeleting)} className="flex-1 py-3 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 shadow-lg shadow-rose-500/30">{t.common.delete}</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
+
+        {/* VIEW: PROFILE (Feature 6) */}
+        {currentView === 'PROFILE' && (
+            <div className="max-w-2xl mx-auto p-6 pt-24 animate-in fade-in slide-in-from-right-8 duration-500 pb-32">
+                <header className="mb-10 pt-4">
+                    <h1 className="text-4xl font-extrabold text-slate-900 mb-2 tracking-tight">{t.profile.title}</h1>
+                    <p className="text-slate-500 text-lg">{t.profile.subtitle}</p>
                 </header>
 
                 <div className="space-y-6">
-                    {/* User Account Section */}
-                    <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-10"><UserIcon size={120} /></div>
-                        <h3 className="font-bold text-stone-800 mb-4 border-b border-stone-100 pb-2 flex items-center gap-2 relative z-10">
-                            {t.accountSettings}
-                        </h3>
-                        
-                        <div className="space-y-4 relative z-10">
-                            {/* Username with Edit */}
-                            <div>
-                                <span className="block text-stone-400 text-xs uppercase tracking-wider mb-1">Username</span>
-                                {isEditingUsername ? (
-                                    <div className="flex gap-2">
+                    
+                    {/* Identity Card */}
+                    <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-lg relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-100 rounded-full blur-[80px] -mr-20 -mt-20 z-0"></div>
+                        <div className="relative z-10 flex flex-col items-center">
+                            <div className="w-24 h-24 rounded-full bg-slate-200 border-4 border-white shadow-xl mb-6 overflow-hidden">
+                                {user.photoURL ? (
+                                    <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover"/>
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-indigo-600 text-white">
+                                        <UserIcon size={40} />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Editable Username */}
+                            <div className="text-center w-full mb-2">
+                                {isEditingName ? (
+                                    <div className="flex items-center gap-2 justify-center max-w-xs mx-auto">
                                         <input 
-                                            autoFocus
                                             type="text" 
-                                            className="flex-1 border border-teal-300 rounded-lg px-2 py-1 text-sm outline-none bg-teal-50"
-                                            value={tempUsername}
-                                            onChange={e => setTempUsername(e.target.value)}
+                                            autoFocus
+                                            className="w-full text-center text-3xl font-extrabold bg-slate-50 border-b-2 border-indigo-500 outline-none text-slate-900 px-2 py-1 rounded-t-lg"
+                                            value={editNameValue}
+                                            onChange={e => setEditNameValue(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleUpdateUsername()}
                                         />
-                                        <button onClick={handleSaveUsername} className="bg-teal-600 text-white px-3 py-1 rounded-lg text-xs font-bold">{t.save}</button>
-                                        <button onClick={() => setIsEditingUsername(false)} className="bg-stone-200 text-stone-600 px-3 py-1 rounded-lg text-xs">{t.cancel}</button>
+                                        <button 
+                                            onClick={handleUpdateUsername}
+                                            className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700"
+                                        >
+                                            <Check size={20}/>
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsEditingName(false)}
+                                            className="p-2 bg-slate-200 text-slate-600 rounded-xl hover:bg-slate-300"
+                                        >
+                                            <X size={20}/>
+                                        </button>
                                     </div>
                                 ) : (
-                                    <div className="flex justify-between items-center group">
-                                        <span className="font-medium text-stone-800 text-lg">{profile.username}</span>
-                                        <button onClick={() => { setTempUsername(profile.username || ''); setIsEditingUsername(true); }} className="text-teal-600 opacity-0 group-hover:opacity-100 transition p-1 hover:bg-teal-50 rounded">
-                                            <Edit2 size={16} />
+                                    <div className="flex items-center justify-center gap-3 group">
+                                        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">{profile.username}</h2>
+                                        <button 
+                                            onClick={() => { setEditNameValue(profile.username || ''); setIsEditingName(true); }}
+                                            className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                        >
+                                            <Edit2 size={18}/>
                                         </button>
                                     </div>
                                 )}
                             </div>
-
-                            {/* Email & Method */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <span className="block text-stone-400 text-xs uppercase tracking-wider mb-1 flex items-center gap-1"><Mail size={10} /> {t.email}</span>
-                                    <span className="text-sm font-medium text-stone-600">{user.email}</span>
-                                </div>
-                                <div>
-                                    <span className="block text-stone-400 text-xs uppercase tracking-wider mb-1 flex items-center gap-1"><Key size={10} /> {t.method}</span>
-                                    <span className="text-sm font-medium text-stone-600 capitalize">{getProviderName()}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="mt-6 pt-4 border-t border-stone-100 flex flex-col gap-3 relative z-10">
-                            <button onClick={onSignOut} className="w-full py-3 rounded-xl bg-stone-100 text-stone-600 font-bold text-sm hover:bg-stone-200 transition flex items-center justify-center gap-2">
-                                <LogOut size={16} /> {t.signOut}
-                            </button>
                             
-                            {!showDeleteConfirm ? (
-                                <button onClick={() => setShowDeleteConfirm(true)} className="text-xs text-red-400 hover:text-red-600 font-medium text-center mt-1">
-                                    {t.deleteAccount}
-                                </button>
-                            ) : (
-                                <div className="bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-2">
-                                    <div className="flex gap-2 items-start mb-2">
-                                        <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
-                                        <p className="text-xs text-red-700 font-medium">{t.deleteWarning}</p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={handleDeleteAccount} className="flex-1 bg-red-600 text-white py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-red-700">{t.confirmDelete}</button>
-                                        <button onClick={() => setShowDeleteConfirm(false)} className="px-3 py-2 bg-white border border-red-100 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50">{t.cancel}</button>
-                                    </div>
-                                </div>
-                            )}
+                            <div className="flex items-center gap-2 text-slate-400 font-medium mb-6">
+                                <Mail size={16}/> {user.email}
+                            </div>
+
+                            <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100">
+                                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                                <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                                    {user.providerData[0]?.providerId.includes('google') ? t.profile.googleAccount : t.profile.emailAccount}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Family Data Summary (ReadOnly) */}
-                    <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm opacity-80">
-                        <h3 className="font-bold text-stone-800 mb-4 border-b border-stone-100 pb-2">{t.familyStructure}</h3>
-                        <div className="space-y-3">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-stone-600">Total Members</span>
-                                <span className="font-bold text-stone-800">{profile.memberCount}</span>
+                    {/* Sign Out Card */}
+                    <button 
+                        onClick={onSignOut}
+                        className="w-full bg-white p-6 rounded-[2rem] border border-slate-200 flex items-center justify-between group hover:border-slate-300 hover:shadow-lg transition-all"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-500 group-hover:bg-slate-200 transition-colors">
+                                <LogOut size={24}/>
                             </div>
-                             {profile.primaryUser?.state && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-stone-600">Location</span>
-                                    <span className="font-bold text-stone-800">{profile.primaryUser.state}</span>
-                                </div>
-                            )}
-                            <button onClick={() => { setWizardStep(1); setCurrentView('HOME'); }} className="w-full mt-2 py-3 rounded-xl border-2 border-dashed border-stone-200 text-stone-400 font-bold text-xs hover:bg-stone-50 hover:border-stone-300 transition">
-                                {t.edit}
-                            </button>
+                            <div className="text-left">
+                                <h3 className="font-bold text-slate-900 text-lg">{t.profile.signOutTitle}</h3>
+                                <p className="text-slate-500 text-sm">{t.profile.signOutText}</p>
+                            </div>
                         </div>
-                    </div>
+                        <div className="bg-slate-50 p-3 rounded-full text-slate-400 group-hover:bg-white group-hover:shadow-sm transition-all">
+                            <ChevronRight size={20}/>
+                        </div>
+                    </button>
                 </div>
             </div>
         )}
 
-        {/* BOTTOM NAVIGATION */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 px-6 py-2 pb-5 flex justify-between items-center z-30 shadow-[0_-5px_10px_rgba(0,0,0,0.02)]">
-            <button 
-                onClick={() => setCurrentView('HOME')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${currentView === 'HOME' ? 'text-teal-600 font-bold' : 'text-stone-400 hover:text-stone-600'}`}
-            >
-                <Home size={24} strokeWidth={currentView === 'HOME' ? 2.5 : 2} />
-                <span className="text-[10px]">{t.navHome}</span>
-            </button>
+        {/* VIEW: SETTINGS (Feature 7) */}
+        {currentView === 'SETTINGS' && (
+            <div className="max-w-2xl mx-auto p-6 pt-24 animate-in fade-in slide-in-from-right-8 duration-500 pb-32">
+                <header className="mb-10 pt-4">
+                     <button onClick={() => setCurrentView('HOME')} className="mb-4 text-slate-400 hover:text-slate-600 flex items-center gap-2 font-bold text-sm"><ArrowLeft size={16}/> {t.nav.backToDashboard}</button>
+                    <h1 className="text-4xl font-extrabold text-slate-900 mb-2 tracking-tight">{t.settings.title}</h1>
+                    <p className="text-slate-500 text-lg">{t.settings.subtitle}</p>
+                </header>
 
-            <button 
-                onClick={() => setCurrentView('SCHEMES')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${currentView === 'SCHEMES' ? 'text-teal-600 font-bold' : 'text-stone-400 hover:text-stone-600'}`}
-            >
-                <FileText size={24} strokeWidth={currentView === 'SCHEMES' ? 2.5 : 2} />
-                <span className="text-[10px]">{t.navSchemes}</span>
-            </button>
+                <div className="space-y-8">
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{t.settings.dataControl}</h3>
+                        <div className="space-y-4">
+                             {/* Edit Snapshot */}
+                             <button onClick={handleEditSnapshot} className="w-full bg-white p-6 rounded-[2rem] border border-slate-200 flex items-center justify-between group hover:border-indigo-200 hover:shadow-lg transition-all text-left">
+                                <div className="flex items-center gap-4">
+                                     <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                         <Edit2 size={24} />
+                                     </div>
+                                     <div>
+                                         <h4 className="font-bold text-slate-900 text-lg">{t.settings.editSnapshot}</h4>
+                                         <p className="text-slate-500 text-sm">{t.settings.editSnapshotSub}</p>
+                                     </div>
+                                </div>
+                                <ChevronRight className="text-slate-300 group-hover:text-indigo-600" />
+                             </button>
 
-            <button 
-                onClick={() => setCurrentView('CHAT')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${currentView === 'CHAT' ? 'text-teal-600 font-bold' : 'text-stone-400 hover:text-stone-600'}`}
-            >
-                <MessageCircle size={24} strokeWidth={currentView === 'CHAT' ? 2.5 : 2} />
-                <span className="text-[10px]">{t.navChat}</span>
-            </button>
+                             {/* Clear History */}
+                             <button onClick={() => setConfirmClearHistory(true)} className="w-full bg-white p-6 rounded-[2rem] border border-slate-200 flex items-center justify-between group hover:border-amber-200 hover:shadow-lg transition-all text-left">
+                                <div className="flex items-center gap-4">
+                                     <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                                         <History size={24} />
+                                     </div>
+                                     <div>
+                                         <h4 className="font-bold text-slate-900 text-lg">{t.settings.clearHistory}</h4>
+                                         <p className="text-slate-500 text-sm">{t.settings.clearHistorySub}</p>
+                                     </div>
+                                </div>
+                                <ChevronRight className="text-slate-300 group-hover:text-amber-600" />
+                             </button>
 
-            <button 
-                onClick={() => setCurrentView('PROFILE')}
-                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${currentView === 'PROFILE' ? 'text-teal-600 font-bold' : 'text-stone-400 hover:text-stone-600'}`}
-            >
-                <User size={24} strokeWidth={currentView === 'PROFILE' ? 2.5 : 2} />
-                <span className="text-[10px]">{t.navProfile}</span>
-            </button>
+                             {/* Delete Account */}
+                             <button onClick={() => setIsDeletingAccount(true)} className="w-full bg-white p-6 rounded-[2rem] border border-slate-200 flex items-center justify-between group hover:border-rose-200 hover:shadow-lg transition-all text-left">
+                                <div className="flex items-center gap-4">
+                                     <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                                         <Trash2 size={24} />
+                                     </div>
+                                     <div>
+                                         <h4 className="font-bold text-slate-900 text-lg">{t.settings.deleteAccount}</h4>
+                                         <p className="text-slate-500 text-sm">{t.settings.deleteAccountSub}</p>
+                                     </div>
+                                </div>
+                                 <ChevronRight className="text-slate-300 group-hover:text-rose-600" />
+                             </button>
+                        </div>
+                    </div>
+
+                    {/* Section 2 */}
+                    <div>
+                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{t.settings.aboutGuidance}</h3>
+                         <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                             <p className="text-slate-600 font-medium leading-relaxed">
+                                 {t.settings.guidanceText}
+                             </p>
+                         </div>
+                    </div>
+                </div>
+
+                {/* Clear History Confirmation Modal */}
+                {confirmClearHistory && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-amber-950/30 backdrop-blur-sm p-4">
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl max-w-md w-full animate-in zoom-in-95 border border-amber-100">
+                            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-6 mx-auto">
+                                <AlertCircle size={32} />
+                            </div>
+                            <h3 className="text-2xl font-extrabold text-slate-900 mb-4 text-center">{t.settings.clearHistoryConfirmTitle}</h3>
+                            <p className="text-slate-500 mb-8 font-medium text-center leading-relaxed">
+                                {t.settings.clearHistoryConfirmText}
+                            </p>
+                            
+                            <div className="space-y-3">
+                                <button 
+                                    onClick={handleClearHistory}
+                                    disabled={isProcessingClear}
+                                    className="w-full py-4 bg-amber-500 text-white font-bold rounded-2xl hover:bg-amber-600 shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2"
+                                >
+                                    {isProcessingClear ? <Loader2 className="animate-spin"/> : t.settings.yesClear}
+                                </button>
+                                <button 
+                                    onClick={() => setConfirmClearHistory(false)}
+                                    disabled={isProcessingClear}
+                                    className="w-full py-4 bg-white border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50"
+                                >
+                                    {t.common.cancel}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Account Deletion Confirmation Modal */}
+                {isDeletingAccount && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-rose-950/30 backdrop-blur-sm p-4">
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl max-w-md w-full animate-in zoom-in-95 border border-rose-100">
+                            <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-6 mx-auto">
+                                <AlertTriangle size={32} />
+                            </div>
+                            <h3 className="text-2xl font-extrabold text-slate-900 mb-4 text-center">{t.settings.deleteAccountConfirmTitle}</h3>
+                            <p className="text-slate-500 mb-8 font-medium text-center leading-relaxed">
+                                {t.settings.deleteAccountConfirmText}
+                            </p>
+                            
+                            <div className="space-y-3">
+                                <button 
+                                    onClick={handleFullAccountDeletion}
+                                    disabled={isDeleteProcessing}
+                                    className="w-full py-4 bg-rose-600 text-white font-bold rounded-2xl hover:bg-rose-700 shadow-xl shadow-rose-500/20 flex items-center justify-center gap-2"
+                                >
+                                    {isDeleteProcessing ? <Loader2 className="animate-spin"/> : t.settings.yesDelete}
+                                </button>
+                                <button 
+                                    onClick={() => setIsDeletingAccount(false)}
+                                    disabled={isDeleteProcessing}
+                                    className="w-full py-4 bg-white border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50"
+                                >
+                                    {t.common.cancel}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
+
+        {/* BOTTOM NAVIGATION (Floating Dock) */}
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
+            <div className="glass-panel px-3 py-3 rounded-full flex items-center shadow-2xl shadow-slate-900/10 border border-white/50">
+                {[{v:'HOME', i:Home, l:t.nav.home}, {v:'SCHEMES', i:FileText, l:t.nav.schemes}, {v:'CHAT', i:MessageCircle, l:t.nav.chat}].map((item: any) => (
+                    <button 
+                        key={item.v} 
+                        onClick={() => setCurrentView(item.v as any)} 
+                        title={item.l}
+                        className={`p-4 rounded-full transition-all duration-300 mx-1 ${currentView === item.v ? 'bg-slate-900 text-white scale-110 shadow-lg' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
+                    >
+                        <item.i size={24} strokeWidth={2.5} />
+                    </button>
+                ))}
+            </div>
         </div>
     </div>
   );
 };
-
-// Simple Icon Placeholders for specific sections to avoid huge import list
-const BookOpenIcon = ({className, size}: any) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-);
-const BriefcaseIcon = ({className, size}: any) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-);

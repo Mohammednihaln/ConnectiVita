@@ -1,83 +1,100 @@
 
 import React from 'react';
-import { ArrowLeft, GitCommit, Info } from 'lucide-react';
+import { ArrowLeft, Calendar, Info, MapPin } from 'lucide-react';
 import { LifeJourneyEntry } from '../types';
 
 interface Props {
   entries: LifeJourneyEntry[];
   onBack: () => void;
+  t: any;
 }
 
-export const FamilyJourneyView: React.FC<Props> = ({ entries, onBack }) => {
-  // Sort descending by time
-  const sortedEntries = [...entries].sort((a, b) => b.timestamp - a.timestamp);
+export const FamilyJourneyView: React.FC<Props> = ({ entries, onBack, t }) => {
+  // Sort oldest to newest to calculate ranges
+  const chronologicalEntries = [...entries].sort((a, b) => a.timestamp - b.timestamp);
+
+  // Helper to format date ranges
+  const getRange = (index: number) => {
+    const current = chronologicalEntries[index];
+    const next = chronologicalEntries[index + 1];
+    
+    // Fallback if date string is weird, though usually standardized
+    const start = current.date; 
+    const end = next ? next.date : t.home.now;
+    
+    return `${start} — ${end}`;
+  };
+
+  // Reverse for display (Newest at top)
+  const displayEntries = chronologicalEntries.map((entry, idx) => ({
+      ...entry,
+      dateRange: getRange(idx)
+  })).reverse();
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col">
-      <header className="bg-white sticky top-0 z-20 border-b border-stone-200 px-4 py-4 flex items-center gap-4 shadow-sm">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      <header className="bg-white/90 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/60 px-6 py-5 flex items-center gap-4 shadow-sm">
         <button 
           onClick={onBack}
-          className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition"
+          className="w-12 h-12 flex items-center justify-center text-slate-500 hover:bg-slate-100 rounded-2xl transition-colors border border-transparent hover:border-slate-200"
         >
           <ArrowLeft size={24} />
         </button>
         <div>
-           <h1 className="font-bold text-stone-800 text-lg leading-none">Your Family’s Life Journey</h1>
-           <p className="text-stone-400 text-xs mt-1">A reflective record of how far you’ve come.</p>
+           <h1 className="font-extrabold text-slate-900 text-xl leading-tight">{t.home.viewJourney}</h1>
+           <p className="text-slate-500 text-xs font-bold uppercase tracking-wide">A story of your family so far</p>
         </div>
       </header>
 
-      <main className="flex-1 max-w-2xl mx-auto w-full p-6 relative">
+      <main className="flex-1 max-w-2xl mx-auto w-full p-8 relative">
          {/* Vertical Timeline Line */}
-         <div className="absolute left-9 top-6 bottom-0 w-0.5 bg-stone-200"></div>
+         <div className="absolute left-8 top-10 bottom-0 w-0.5 bg-indigo-100"></div>
 
-         <div className="space-y-12">
-            {sortedEntries.length === 0 ? (
-                <div className="ml-12 p-6 bg-white rounded-2xl border border-stone-100 text-stone-500 text-sm">
-                    Your journey history will appear here as you update your snapshot.
+         <div className="space-y-16 pl-8">
+            {displayEntries.length === 0 ? (
+                <div className="p-10 bg-white rounded-[2.5rem] border border-slate-100 text-slate-400 text-base font-medium text-center shadow-lg shadow-slate-100">
+                    No journey history recorded yet. Life updates will appear here.
                 </div>
             ) : (
-                sortedEntries.map((entry, idx) => (
-                    <div key={entry.id} className="relative flex gap-6 animate-in slide-in-from-bottom-4 duration-500" style={{animationDelay: `${idx * 100}ms`}}>
+                displayEntries.map((entry, idx) => (
+                    <div key={entry.id} className="relative animate-in slide-in-from-bottom-8 duration-700" style={{animationDelay: `${idx * 100}ms`}}>
                         
-                        {/* Dot */}
-                        <div className="relative z-10 shrink-0 mt-1">
-                             <div className="w-7 h-7 bg-teal-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                                <GitCommit size={14} className="text-teal-600" />
-                             </div>
+                        {/* Timeline Node */}
+                        <div className="absolute -left-[41px] top-0 w-5 h-5 bg-white border-4 border-indigo-600 rounded-full z-10"></div>
+
+                        {/* Date Range Label */}
+                        <div className="flex items-center gap-2 text-xs font-black text-indigo-400 uppercase tracking-widest mb-3">
+                            <Calendar size={14} />
+                            {entry.dateRange}
                         </div>
 
-                        {/* Content */}
-                        <div className="flex-1">
-                            <div className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">
-                                {entry.date}
-                            </div>
-                            <div className="bg-white p-5 rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition-shadow">
-                                <p className="text-stone-800 font-medium text-lg leading-relaxed mb-3">
-                                    "{entry.summary}"
-                                </p>
-                                {entry.lifeStagesAfter && entry.lifeStagesAfter.length > 0 && (
-                                    <div className="flex flex-wrap gap-2">
-                                        {entry.lifeStagesAfter.map(stage => (
-                                            <span key={stage} className="bg-stone-100 text-stone-600 px-2 py-1 rounded-md text-xs font-semibold">
-                                                {stage}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                        {/* Content Card */}
+                        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
+                             {/* Decorative Background Blob */}
+                             <div className="absolute -right-10 -top-10 w-32 h-32 bg-slate-50 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+
+                            {/* Life Stage Title */}
+                            <h2 className="text-2xl font-extrabold text-slate-900 mb-4 relative z-10 leading-tight">
+                                {entry.lifeStagesAfter && entry.lifeStagesAfter.length > 0 
+                                    ? entry.lifeStagesAfter[0] 
+                                    : "Life Update"}
+                            </h2>
+
+                            {/* System Interpretation (Summary) */}
+                            <p className="text-slate-600 font-medium text-lg leading-relaxed relative z-10">
+                                {entry.summary}
+                            </p>
                         </div>
                     </div>
                 ))
             )}
          </div>
 
-         {/* Optional Info */}
-         <div className="mt-16 text-center">
-             <button onClick={() => alert("This timeline helps you see the bigger picture of your family's growth over months and years. It is private to you.")} className="inline-flex items-center gap-2 text-stone-400 text-xs hover:text-teal-600 transition">
-                 <Info size={14} />
-                 Why is this shown?
-             </button>
+         <div className="mt-24 text-center pb-10">
+             <div className="inline-flex items-center gap-2 text-slate-400 text-xs font-bold bg-white px-5 py-3 rounded-full border border-slate-100 shadow-sm">
+                 <Info size={14} className="text-indigo-400" />
+                 Generated securely by ConnectiVita
+             </div>
          </div>
       </main>
     </div>
