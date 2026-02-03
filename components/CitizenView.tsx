@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, Activity, Heart, Info, Loader2, Trash2, User as UserIcon, Check, ChevronRight, X, MessageCircle, Send, Plus, History, Cloud, LogOut, Lock, ScrollText, AlertTriangle, Clock, ArrowLeft, ArrowRight, Pause, Play, Download, Mic, Volume2, Globe, Sparkles, Shield, Users, Home, FileText, User, Edit2, Mail, Key, ShieldCheck, XCircle, Zap, Menu, AlertCircle, RefreshCw, HelpCircle, ChevronDown, ChevronUp, MessageSquare, Briefcase, Star, GraduationCap, Building2, MapPin, Accessibility, Coffee } from 'lucide-react';
+import { Settings, Activity, Heart, Info, Loader2, Trash2, User as UserIcon, Check, ChevronRight, X, MessageCircle, Send, Plus, History, Cloud, LogOut, Lock, ScrollText, AlertTriangle, Clock, ArrowLeft, ArrowRight, Pause, Play, Download, Mic, Volume2, Globe, Sparkles, Shield, Users, Home, FileText, User, Edit2, Mail, Key, ShieldCheck, XCircle, Zap, Menu, AlertCircle, RefreshCw, HelpCircle, ChevronDown, ChevronUp, MessageSquare, Briefcase, Star, GraduationCap, Building2, MapPin, Accessibility, Coffee, Baby } from 'lucide-react';
 import { LifeStageTimeline } from './LifeStageTimeline';
 import { FamilyJourneyView } from './FamilyJourneyView';
 import { UpdateHistoryView } from './UpdateHistoryView';
@@ -186,15 +186,15 @@ const TopHeader: React.FC<{
     const [langMenuOpen, setLangMenuOpen] = useState(false);
 
     return (
-        <header className="bg-white sticky top-0 z-40 border-b border-stone-100 px-6 py-4 flex justify-between items-center shadow-sm/50">
-            <div className="text-xl font-semibold text-teal-900 tracking-tight cursor-pointer" onClick={() => onNavigate('PROFILE')}>ConnectiVita</div>
+        <header className="bg-white/60 backdrop-blur-xl sticky top-0 z-40 border-b border-white/50 px-6 py-4 flex justify-between items-center shadow-sm">
+            <div className="text-2xl font-bold bg-gradient-to-r from-teal-700 to-teal-500 bg-clip-text text-transparent tracking-tight cursor-pointer" onClick={() => onNavigate('PROFILE')}>ConnectiVita</div>
 
             <div className="flex items-center gap-3">
                 {/* Language Selector */}
                 <div className="relative">
                     <button
                         onClick={() => setLangMenuOpen(!langMenuOpen)}
-                        className="w-10 h-10 rounded-full bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-600 hover:bg-stone-100 transition-colors"
+                        className="w-10 h-10 rounded-full bg-white/50 border border-white/60 flex items-center justify-center text-stone-600 hover:bg-white hover:shadow-md transition-all duration-300"
                         title="Change Language"
                     >
                         <Globe size={20} />
@@ -203,15 +203,15 @@ const TopHeader: React.FC<{
                     {langMenuOpen && (
                         <>
                             <div className="fixed inset-0 z-40" onClick={() => setLangMenuOpen(false)}></div>
-                            <div className="absolute right-0 top-12 w-40 bg-white rounded-xl shadow-xl border border-stone-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 max-h-64 overflow-y-auto">
+                            <div className="absolute right-0 top-12 w-48 bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-2">
                                 {LANGUAGES.map(lang => (
                                     <button
                                         key={lang}
                                         onClick={() => { onLanguageChange(lang); setLangMenuOpen(false); }}
-                                        className={`w-full text-left px-4 py-3 text-sm font-medium hover:bg-stone-50 flex items-center justify-between ${currentLanguage === lang ? 'text-teal-600 bg-teal-50' : 'text-stone-700'}`}
+                                        className={`w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition-all flex items-center justify-between ${currentLanguage === lang ? 'bg-teal-50 text-teal-700' : 'text-stone-600 hover:bg-stone-50'}`}
                                     >
                                         {lang}
-                                        {currentLanguage === lang && <Check size={14} />}
+                                        {currentLanguage === lang && <Check size={16} className="text-teal-600" />}
                                     </button>
                                 ))}
                             </div>
@@ -223,7 +223,7 @@ const TopHeader: React.FC<{
                 <div className="relative">
                     <button
                         onClick={() => setMenuOpen(!menuOpen)}
-                        className="w-10 h-10 rounded-full bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-500 hover:bg-stone-200 transition-colors"
+                        className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-200 flex items-center justify-center hover:scale-105 transition-transform"
                     >
                         <UserIcon size={20} />
                     </button>
@@ -231,16 +231,16 @@ const TopHeader: React.FC<{
                     {menuOpen && (
                         <>
                             <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)}></div>
-                            <div className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-xl border border-stone-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                                <button onClick={() => { onNavigate('PROFILE'); setMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm font-medium text-stone-700 hover:bg-stone-50 flex items-center gap-2">
-                                    <UserIcon size={16} /> Profile
+                            <div className="absolute right-0 top-12 w-52 bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-2">
+                                <button onClick={() => { onNavigate('PROFILE'); setMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm font-semibold text-stone-700 hover:bg-teal-50 rounded-xl flex items-center gap-3 transition-colors">
+                                    <UserIcon size={18} className="text-teal-600" /> Profile
                                 </button>
-                                <button onClick={() => { onNavigate('SETTINGS'); setMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm font-medium text-stone-700 hover:bg-stone-50 flex items-center gap-2">
-                                    <Settings size={16} /> Settings
+                                <button onClick={() => { onNavigate('SETTINGS'); setMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm font-semibold text-stone-700 hover:bg-teal-50 rounded-xl flex items-center gap-3 transition-colors">
+                                    <Settings size={18} className="text-teal-600" /> Settings
                                 </button>
-                                <div className="border-t border-stone-100 my-1"></div>
-                                <button onClick={onSignOut} className="w-full text-left px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 flex items-center gap-2">
-                                    <LogOut size={16} /> Sign Out
+                                <div className="border-t border-stone-100 my-2"></div>
+                                <button onClick={onSignOut} className="w-full text-left px-4 py-3 text-sm font-bold text-rose-500 hover:bg-rose-50 rounded-xl flex items-center gap-3 transition-colors">
+                                    <LogOut size={18} /> Sign Out
                                 </button>
                             </div>
                         </>
@@ -269,7 +269,9 @@ export const CitizenView: React.FC<Props> = ({ user, onSignOut }) => {
     });
 
     // UI State
-    const [currentView, setCurrentView] = useState<'HOME' | 'SCHEMES' | 'CHAT' | 'PROFILE' | 'SETTINGS'>('HOME');
+    const [currentView, setCurrentView] = useState<'HOME' | 'SCHEMES' | 'CHAT' | 'PROFILE' | 'SETTINGS' | 'EDIT_FAMILY'>('HOME');
+    const [editingMember, setEditingMember] = useState<{ section: string, index: number } | null>(null);
+    const [tempMemberData, setTempMemberData] = useState<FamilyMember>({});
     const [isInitializing, setIsInitializing] = useState(true);
     const [schemeData, setSchemeData] = useState<SchemeAnalysisResult | null>(null);
 
@@ -1356,7 +1358,7 @@ export const CitizenView: React.FC<Props> = ({ user, onSignOut }) => {
 
     // ... (Main Application Render) ...
     return (
-        <div className="min-h-screen bg-stone-50 pb-24 font-sans flex flex-col relative">
+        <div className="min-h-screen pb-32 font-sans flex flex-col relative transition-colors duration-500">
             <TopHeader
                 onNavigate={setCurrentView}
                 onSignOut={onSignOut}
@@ -1381,410 +1383,847 @@ export const CitizenView: React.FC<Props> = ({ user, onSignOut }) => {
             )}
 
             {currentView === 'HOME' && (
-                <div className="max-w-xl w-full mx-auto p-5 space-y-8 animate-in fade-in duration-500">
-                    <div className="space-y-1 px-1">
-                        <h1 className="text-3xl font-semibold text-teal-900 tracking-tight">Hello, {profile.username || 'Friend'} 👋</h1>
-                        <p className="text-stone-500 text-lg font-normal">Here’s a quick snapshot of your family.</p>
+                <div className="max-w-7xl w-full mx-auto p-5 space-y-8 animate-in fade-in duration-500 pb-32">
+                    {/* Greeting */}
+                    <div className="space-y-2 px-2">
+                        <p className="text-stone-500 font-medium text-sm uppercase tracking-widest">ConnectiVita • {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                        <h1 className="text-5xl font-extrabold text-stone-900 tracking-tight leading-tight">
+                            Hello, <span className="bg-clip-text text-transparent bg-gradient-to-r from-teal-600 to-emerald-500">{profile.username || 'Friend'}</span>
+                        </h1>
                     </div>
 
-                    <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-stone-100 relative overflow-hidden">
-                        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-teal-400/30 via-teal-100/30 to-white/0"></div>
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <span className="bg-teal-100 text-teal-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Current Stage</span>
-                                <h2 className="text-xl font-bold mt-1">{lifeState.currentStage}</h2>
-                            </div>
-                            <button onClick={() => { setLifeState(null); setCurrentStepId('welcome'); setStepHistory([]); }} className="text-teal-600 text-xs font-bold bg-teal-50 px-3 py-1.5 rounded-lg">Edit</button>
-                        </div>
-                        <p className="text-stone-600 text-sm bg-stone-50 p-3 rounded-xl mb-4">{lifeState.explanation}</p>
-                        <LifeStageTimeline
-                            current={lifeState.currentStage}
-                            previous={lifeState.previousStage}
-                            next={lifeState.nextStagePrediction}
-                            confidence={'High'}
-                            language={settings.language}
-                            onViewJourney={() => setShowJourney(true)}
-                        />
+                    {/* Two Column Layout: Snapshot (Left) + Update (Right) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+                        {/* LEFT: Family Snapshot Card - VIBRANT DARK */}
+                        <div className="bg-white border border-stone-200 p-8 rounded-[2.5rem] shadow-sm relative overflow-hidden group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
 
-                        {/* Focus Areas Section */}
-                        <div className="mt-8 pt-6 border-t border-stone-50">
-                            <h3 className="text-lg font-semibold text-stone-800 mb-1">{t.home?.focusAreas || "Focus areas for your family right now"}</h3>
-                            <p className="text-stone-400 text-sm mb-5">{t.home?.focusAreasSubtitle || "Based on your current life stage."}</p>
 
-                            <div className="grid grid-cols-1 gap-4">
-                                {determineFocusAreas().length > 0 ? (
-                                    determineFocusAreas().map((area) => (
-                                        <div key={area.id} className={`p-5 rounded-[1.5rem] border shadow-sm transition-all duration-300 flex gap-4 items-start group cursor-default ${area.theme.split(' icon-')[0]}`}>
-                                            <div className={`p-2.5 rounded-xl text-white shadow-sm shrink-0 bg-white/80 ${area.theme.includes('rose') ? 'text-rose-600' : area.theme.includes('sky') ? 'text-sky-600' : area.theme.includes('emerald') ? 'text-emerald-600' : area.theme.includes('indigo') ? 'text-indigo-600' : area.theme.includes('amber') ? 'text-amber-600' : 'text-violet-600'}`}>
-                                                <area.icon size={22} strokeWidth={2} />
-                                            </div>
-                                            <div>
-                                                <h4 className={`font-bold text-base mb-1 ${area.theme.split(' icon-')[0].split(' ').find(c => c.startsWith('text-'))}`}>{area.title}</h4>
-                                                <p className="text-stone-600 text-sm leading-relaxed mb-2 opacity-90">{area.desc}</p>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleExplainFocusArea(area); }}
-                                                    className={`text-[11px] font-bold hover:underline flex items-center gap-1 transition-colors px-2 py-1 rounded-lg bg-white/50 w-fit ${area.theme.includes('rose') ? 'text-rose-700' : area.theme.includes('sky') ? 'text-sky-700' : area.theme.includes('emerald') ? 'text-emerald-700' : area.theme.includes('indigo') ? 'text-indigo-700' : area.theme.includes('amber') ? 'text-amber-700' : 'text-violet-700'}`}
-                                                >
-                                                    {t.home?.explainThis || "Explain this"} <MessageCircle size={12} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="col-span-2 text-center py-6 text-stone-400 text-sm italic">
-                                        {t.home?.focusAreaContent?.empty || "Every family is different. Focus areas will appear as life changes."}
+                            {/* Header */}
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-teal-50 text-teal-600 rounded-xl">
+                                        <Users size={20} />
                                     </div>
-                                )}
+                                    <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Family Profile</span>
+                                </div>
+
+                            </div>
+
+                            {/* Main Content */}
+                            <div className="flex-1 flex flex-col justify-between">
+                                <div>
+                                    <h2 className="text-4xl font-bold text-stone-800 mb-3 tracking-tight">{lifeState.currentStage}</h2>
+                                    <p className="text-stone-500 text-sm leading-relaxed font-medium mb-6 relative pl-4 border-l-2 border-teal-200">
+                                        {lifeState.explanation}
+                                    </p>
+                                </div>
+
+                                {/* Timeline container */}
+                                <div className="mt-auto bg-stone-50/50 rounded-2xl p-4 border border-stone-100">
+                                    <LifeStageTimeline
+                                        current={lifeState.currentStage}
+                                        previous={lifeState.previousStage}
+                                        next={lifeState.nextStagePrediction}
+                                        confidence={'High'}
+                                        language={settings.language}
+                                        onViewJourney={() => setShowJourney(true)}
+                                    // Custom styling for dark mode timeline if supported, otherwise standard
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        {/* Has Anything Changed? Card */}
-                        <div className="mt-8 bg-white p-6 md:p-8 rounded-[2rem] border border-stone-100 shadow-sm">
-                            <h3 className="text-lg font-semibold text-stone-800 mb-1">Has anything changed recently?</h3>
-                            <p className="text-stone-400 text-sm mb-6">A new job? A baby on the way? A child starting school?</p>
+                        {/* RIGHT: Has Anything Changed? Card */}
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-stone-200/40 border-2 border-stone-50 relative overflow-hidden flex flex-col justify-center h-full">
+                            <div className="absolute top-0 right-0 p-8 opacity-5">
+                                <Sparkles size={120} />
+                            </div>
 
-                            <div className="flex gap-2 relative">
-                                <input
-                                    className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
-                                    placeholder="e.g. My child started school"
-                                    value={updateInput}
-                                    onChange={e => setUpdateInput(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && handleLifeUpdate()}
-                                    disabled={isUpdating}
-                                />
-                                <button
-                                    onClick={handleLifeUpdate}
-                                    disabled={!updateInput.trim() || isUpdating}
-                                    className="bg-stone-900 text-white rounded-xl px-4 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-800 transition-colors"
-                                >
-                                    {isUpdating ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                                </button>
+                            <div className="relative z-10">
+                                <h3 className="text-2xl font-bold text-stone-900 mb-2">Something new?</h3>
+                                <p className="text-stone-500 text-base mb-8 font-medium max-w-xs">Keep your guidance fresh by updating us on life changes.</p>
 
-                                {/* Success Feedback Overlay */}
+                                <div className="space-y-4">
+                                    <input
+                                        className="w-full bg-stone-50 border-0 rounded-2xl px-6 py-5 text-base font-medium focus:outline-none focus:ring-4 focus:ring-stone-100 transition-all shadow-inner placeholder:text-stone-400"
+                                        placeholder="Type here..."
+                                        value={updateInput}
+                                        onChange={e => setUpdateInput(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && handleLifeUpdate()}
+                                        disabled={isUpdating}
+                                    />
+                                    <div className="flex justify-between items-center">
+                                        <button
+                                            onClick={() => setShowHistory(true)}
+                                            className="text-xs font-bold text-stone-400 uppercase tracking-widest hover:text-stone-600 px-2"
+                                        >
+                                            History
+                                        </button>
+                                        <button
+                                            onClick={handleLifeUpdate}
+                                            disabled={!updateInput.trim() || isUpdating}
+                                            className="bg-stone-900 text-white rounded-full px-8 py-4 font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-black hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2"
+                                        >
+                                            {isUpdating ? <Loader2 size={20} className="animate-spin" /> : <>Update <Send size={18} /></>}
+                                        </button>
+                                    </div>
+                                </div>
+
                                 {updateSuccess && (
-                                    <div className="absolute inset-0 bg-teal-50 rounded-xl flex items-center justify-center text-teal-700 font-bold text-sm animate-in fade-in zoom-in duration-200 border border-teal-100">
-                                        <Check size={16} className="mr-2" />
-                                        Updated!
+                                    <div className="absolute inset-0 bg-white/90 backdrop-blur-sm rounded-[2.5rem] flex flex-col items-center justify-center text-teal-600 font-bold animate-in fade-in zoom-in duration-300">
+                                        <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mb-4">
+                                            <Check size={32} />
+                                        </div>
+                                        <span className="text-xl text-teal-800">Got it!</span>
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    </div>
 
-                            <div className="mt-3 text-right">
-                                <button
-                                    onClick={() => setShowHistory(true)}
-                                    className="text-[10px] font-bold text-stone-400 uppercase tracking-widest hover:text-stone-600 flex items-center justify-end gap-1 ml-auto"
-                                >
-                                    <History size={12} />
-                                    View Update History
-                                </button>
+                    {/* Focus Areas Section - Bento Grid Style */}
+                    <div>
+                        <div className="flex items-end justify-between mb-6 px-2">
+                            <div>
+                                <h3 className="text-2xl font-bold text-stone-900">{t.home?.focusAreas || "Focus areas"}</h3>
+                                <p className="text-stone-500 font-medium">{t.home?.focusAreasSubtitle || "Priorities for right now."}</p>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <button onClick={() => setCurrentView('SCHEMES')} className="bg-indigo-50 p-6 rounded-3xl text-left hover:scale-[1.02] transition">
-                            <FileText className="text-indigo-500 mb-3" />
-                            <div className="font-bold text-indigo-900">Schemes</div>
-                            <div className="text-xs text-indigo-400">Government Support</div>
-                        </button>
-                        <button onClick={() => setCurrentView('CHAT')} className="bg-teal-50 p-6 rounded-3xl text-left hover:scale-[1.02] transition">
-                            <MessageCircle className="text-teal-500 mb-3" />
-                            <div className="font-bold text-teal-900">Assistant</div>
-                            <div className="text-xs text-teal-400">Ask anything</div>
-                        </button>
-                    </div>
-                </div>
-            )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {determineFocusAreas().length > 0 ? (
+                                determineFocusAreas().map((area) => (
+                                    <div key={area.id} className={`p-6 rounded-[2rem] transition-all duration-300 flex flex-col justify-between group cursor-default relative overflow-hidden min-h-[180px] hover:-translate-y-1 hover:shadow-xl ${area.theme.includes('rose') ? 'bg-rose-50 hover:shadow-rose-100' : area.theme.includes('sky') ? 'bg-sky-50 hover:shadow-sky-100' : area.theme.includes('emerald') ? 'bg-emerald-50 hover:shadow-emerald-100' : area.theme.includes('indigo') ? 'bg-indigo-50 hover:shadow-indigo-100' : area.theme.includes('amber') ? 'bg-amber-50 hover:shadow-amber-100' : 'bg-violet-50 hover:shadow-violet-100'}`}>
 
-            {currentView === 'SCHEMES' && (
-                <div className="max-w-xl w-full mx-auto p-5 pb-24">
-                    <h1 className="text-2xl font-bold mb-6 text-stone-800">Support for Your Family</h1>
+                                        <div className="flex justify-between items-start">
+                                            <div className={`p-4 rounded-2xl text-white shadow-lg ${area.theme.includes('rose') ? 'bg-rose-500' : area.theme.includes('sky') ? 'bg-sky-500' : area.theme.includes('emerald') ? 'bg-emerald-500' : area.theme.includes('indigo') ? 'bg-indigo-500' : area.theme.includes('amber') ? 'bg-amber-500' : 'bg-violet-500'}`}>
+                                                <area.icon size={28} strokeWidth={2.5} />
+                                            </div>
 
-                    {/* Family Tabs */}
-                    <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide no-scrollbar -mx-5 px-5">
-                        {getAvailableTabs().map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveSchemeTab(tab)}
-                                className={`px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeSchemeTab === tab
-                                    ? 'bg-teal-700 text-white shadow-lg shadow-teal-100 scale-105 ring-2 ring-white'
-                                    : 'bg-white text-stone-500 border border-stone-200 hover:bg-stone-50 hover:text-stone-700'
-                                    }`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleExplainFocusArea(area); }}
+                                                className={`bg-white rounded-full p-2 shadow-sm font-bold text-[10px] uppercase tracking-widest hover:scale-110 transition-transform ${area.theme.includes('rose') ? 'text-rose-600' : area.theme.includes('sky') ? 'text-sky-600' : area.theme.includes('emerald') ? 'text-emerald-600' : area.theme.includes('indigo') ? 'text-indigo-600' : area.theme.includes('amber') ? 'text-amber-600' : 'text-violet-600'}`}
+                                            >
+                                                Explain
+                                            </button>
+                                        </div>
 
-                    {/* Content Area */}
-                    {isSchemeLoading ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-stone-400 space-y-4 animate-pulse">
-                            <div className="w-12 h-12 bg-stone-200 rounded-full"></div>
-                            <div className="h-4 w-48 bg-stone-200 rounded"></div>
-                            <p className="text-sm">Finding best matches...</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            {getFilteredSchemes().length > 0 ? (
-                                getFilteredSchemes().map((s, i) => (
-                                    <div key={i} className="animate-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${i * 100}ms` }}>
-                                        <SchemeCard scheme={s} t={t} />
+                                        <div className="mt-6">
+                                            <h4 className={`text-xl font-bold mb-2 ${area.theme.split(' icon-')[0].split(' ').find(c => c.startsWith('text-'))}`}>{area.title}</h4>
+                                            <p className="text-stone-600 text-sm font-medium leading-relaxed max-w-[90%]">{area.desc}</p>
+                                        </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-20 bg-white rounded-3xl border border-stone-100 border-dashed">
-                                    <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <FileText className="text-stone-300" size={24} />
-                                    </div>
-                                    <p className="text-stone-400 font-medium">No schemes currently apply to this stage.</p>
-                                    <p className="text-stone-300 text-xs mt-1">Check back as life changes.</p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {currentView === 'CHAT' && (
-                <div className="flex flex-col h-[calc(100vh-80px)] max-w-4xl mx-auto p-4 md:flex-row gap-4">
-                    {/* Chat Sidebar (History) */}
-                    <div className={`md:w-64 flex flex-col gap-3 ${activeChatId ? 'hidden md:flex' : 'flex-1'}`}>
-                        <button
-                            onClick={() => setActiveChatId('new')}
-                            className="bg-teal-600 text-white p-4 rounded-xl font-bold shadow-sm hover:bg-teal-700 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Plus size={20} />
-                            {t.chat?.newChat || 'New Chat'}
-                        </button>
-
-                        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                            {Object.values(chats).sort((a, b) => b.timestamp - a.timestamp).map(chat => (
-                                <div
-                                    key={chat.id}
-                                    onClick={() => setActiveChatId(chat.id)}
-                                    className={`p-3 rounded-xl border cursor-pointer transition-all relative group ${activeChatId === chat.id ? 'bg-white border-teal-500 shadow-sm' : 'bg-white/50 border-stone-200 hover:bg-white hover:border-stone-300'}`}
-                                >
-                                    <div className="text-sm font-bold text-stone-800 pr-6 truncate">{chat.title}</div>
-                                    <div className="text-[10px] text-stone-400 mt-1">{new Date(chat.timestamp).toLocaleDateString()}</div>
-
-                                    <button
-                                        onClick={(e) => handleDeleteChat(chat.id, e)}
-                                        className="absolute right-2 top-2 p-1.5 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            ))}
-                            {Object.keys(chats).length === 0 && (
-                                <div className="text-center py-10 text-stone-300 text-xs">
-                                    <MessageSquare size={24} className="mx-auto mb-2 opacity-30" />
-                                    No past conversations
+                                <div className="col-span-2 text-center py-12 bg-stone-50 rounded-[2rem] border-2 border-dashed border-stone-200 text-stone-400">
+                                    <p className="font-medium">{t.home?.focusAreaContent?.empty || "No specific focus areas right now."}</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Chat Area */}
-                    <div className={`flex-1 flex flex-col bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden ${!activeChatId ? 'hidden md:flex' : 'flex'}`}>
-                        {activeChatId && activeChatId !== 'new' && chats[activeChatId] ? (
-                            <>
-                                <div className="p-4 border-b border-stone-100 flex items-center gap-3 bg-stone-50/50">
-                                    <button onClick={() => setActiveChatId(null)} className="md:hidden p-2 -ml-2 text-stone-500">
-                                        <ArrowLeft size={20} />
-                                    </button>
-                                    <div>
-                                        <h3 className="font-bold text-stone-800 text-sm">{chats[activeChatId]?.title}</h3>
-                                        <p className="text-[10px] text-stone-400">ConnectiVita Assistant</p>
-                                    </div>
-                                </div>
-                                <div className="flex-1 overflow-y-auto space-y-4 p-4 scroll-smooth">
-                                    {chats[activeChatId].messages.map((m, i) => (
-                                        <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`p-4 rounded-2xl max-w-[85%] text-sm leading-relaxed shadow-sm ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white border border-stone-100 text-stone-800 rounded-bl-none'}`}>
-                                                {m.content}
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {isChatLoading && (
-                                        <div className="flex justify-start">
-                                            <div className="bg-stone-50 p-3 rounded-2xl rounded-bl-none border border-stone-100 flex gap-1">
-                                                <span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce"></span>
-                                                <span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce delay-100"></span>
-                                                <span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce delay-200"></span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="p-3 bg-white border-t border-stone-100">
-                                    <div className="flex gap-2 relative">
-                                        <input
-                                            className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
-                                            value={chatInput}
-                                            onChange={e => setChatInput(e.target.value)}
-                                            onKeyDown={e => {
-                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    handleSendMessage();
-                                                }
-                                            }}
-                                            placeholder={t.chat?.placeholder || "Ask about your family's needs..."}
-                                            disabled={isChatLoading}
-                                        />
-                                        <button
-                                            onClick={() => handleSendMessage()}
-                                            disabled={!chatInput.trim() || isChatLoading}
-                                            className="bg-teal-600 text-white w-12 rounded-xl flex items-center justify-center shadow-lg shadow-teal-100 hover:bg-teal-700 disabled:opacity-50 disabled:shadow-none transition-all"
-                                        >
-                                            <Send size={20} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-stone-400 p-10 text-center relative">
-                                {activeChatId === 'new' && (
-                                    <button onClick={() => setActiveChatId(null)} className="md:hidden absolute top-4 left-4 p-2 text-stone-500">
-                                        <ArrowLeft size={20} />
-                                    </button>
-                                )}
-                                <Sparkles size={48} className="mb-4 text-teal-100" />
-                                <h3 className="text-stone-800 font-bold mb-2">How can I help you?</h3>
-                                <p className="text-sm max-w-xs mb-6">I can help you understand schemes, guide you through life changes, or just answer questions for your family.</p>
 
-                                {activeChatId === 'new' ? (
-                                    <div className="w-full max-w-sm flex gap-2 animate-in fade-in slide-in-from-bottom-4">
-                                        <input
-                                            autoFocus
-                                            className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
-                                            value={chatInput}
-                                            onChange={e => setChatInput(e.target.value)}
-                                            onKeyDown={e => {
-                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    handleSendMessage();
-                                                }
-                                            }}
-                                            placeholder="Type your question..."
-                                            disabled={isChatLoading}
-                                        />
-                                        <button
-                                            onClick={() => handleSendMessage()}
-                                            disabled={!chatInput.trim() || isChatLoading}
-                                            className="bg-teal-600 text-white w-12 rounded-xl flex items-center justify-center shadow-lg shadow-teal-100 hover:bg-teal-700 disabled:opacity-50 disabled:shadow-none transition-all"
-                                        >
-                                            <Send size={20} />
-                                        </button>
-                                    </div>
+                </div >
+            )
+            }
+
+            {
+                currentView === 'SCHEMES' && (
+                    <div className="max-w-4xl w-full mx-auto p-5 pb-32">
+                        <h1 className="text-2xl font-bold mb-6 text-stone-800">Support for Your Family</h1>
+
+                        {/* Family Tabs */}
+                        <div className="flex gap-2 mb-8 overflow-x-auto pb-4 scrollbar-hide no-scrollbar -mx-5 px-5 select-none">
+                            {getAvailableTabs().map(tab => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveSchemeTab(tab)}
+                                    className={`px-6 py-3 rounded-2xl text-sm font-bold whitespace-nowrap transition-all duration-300 ${activeSchemeTab === tab
+                                        ? 'bg-teal-700 text-white shadow-xl shadow-teal-500/20 scale-105 ring-2 ring-white/50 backdrop-blur-md'
+                                        : 'bg-white/40 text-stone-600 border border-white/60 hover:bg-white/70 hover:scale-105 backdrop-blur-sm'
+                                        }`}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Content Area */}
+                        {isSchemeLoading ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-stone-400 space-y-4 animate-pulse">
+                                <div className="w-12 h-12 bg-stone-200 rounded-full"></div>
+                                <div className="h-4 w-48 bg-stone-200 rounded"></div>
+                                <p className="text-sm">Finding best matches...</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {getFilteredSchemes().length > 0 ? (
+                                    getFilteredSchemes().map((s, i) => (
+                                        <div key={i} className="animate-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${i * 100}ms` }}>
+                                            <SchemeCard scheme={s} t={t} />
+                                        </div>
+                                    ))
                                 ) : (
-                                    <button onClick={() => setActiveChatId('new')} className="text-teal-600 font-bold text-sm hover:underline">Start a new chat</button>
+                                    <div className="text-center py-20 bg-white rounded-3xl border border-stone-100 border-dashed">
+                                        <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <FileText className="text-stone-300" size={24} />
+                                        </div>
+                                        <p className="text-stone-400 font-medium">No schemes currently apply to this stage.</p>
+                                        <p className="text-stone-300 text-xs mt-1">Check back as life changes.</p>
+                                    </div>
                                 )}
                             </div>
                         )}
                     </div>
-                </div>
-            )}
+                )
+            }
 
-            {currentView === 'PROFILE' && (
-                <div className="max-w-xl w-full mx-auto p-5 space-y-6">
-                    <h1 className="text-2xl font-bold">Profile</h1>
-                    <div className="bg-white p-6 rounded-3xl border border-stone-200 space-y-4">
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="text-stone-500">Username</span>
-                            <span className="font-bold">{profile.username}</span>
+            {
+                currentView === 'CHAT' && (
+                    <div className="h-[calc(100vh-120px)] w-full p-4 flex flex-col md:flex-row gap-6 pb-24 md:pb-8">
+                        {/* Chat Sidebar (History) */}
+                        <div className={`md:w-64 flex flex-col gap-3 ${activeChatId ? 'hidden md:flex' : 'flex-1'}`}>
+                            <button
+                                onClick={() => setActiveChatId('new')}
+                                className="bg-teal-600 text-white p-4 rounded-xl font-bold shadow-sm hover:bg-teal-700 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Plus size={20} />
+                                {t.chat?.newChat || 'New Chat'}
+                            </button>
+
+                            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                                {Object.values(chats).sort((a, b) => b.timestamp - a.timestamp).map(chat => (
+                                    <div
+                                        key={chat.id}
+                                        onClick={() => setActiveChatId(chat.id)}
+                                        className={`p-3 rounded-xl border cursor-pointer transition-all relative group ${activeChatId === chat.id ? 'bg-white border-teal-500 shadow-sm' : 'bg-white/50 border-stone-200 hover:bg-white hover:border-stone-300'}`}
+                                    >
+                                        <div className="text-sm font-bold text-stone-800 pr-6 truncate">{chat.title}</div>
+                                        <div className="text-[10px] text-stone-400 mt-1">{new Date(chat.timestamp).toLocaleDateString()}</div>
+
+                                        <button
+                                            onClick={(e) => handleDeleteChat(chat.id, e)}
+                                            className="absolute right-2 top-2 p-1.5 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                                {Object.keys(chats).length === 0 && (
+                                    <div className="text-center py-10 text-stone-300 text-xs">
+                                        <MessageSquare size={24} className="mx-auto mb-2 opacity-30" />
+                                        No past conversations
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="text-stone-500">Gender</span>
-                            <span className="font-bold">{profile.primaryUser.gender}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="text-stone-500">Occupation</span>
-                            <span className="font-bold">{profile.primaryUser.occupationType}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-stone-500">State</span>
-                            <span className="font-bold">{profile.primaryUser.state}</span>
+
+                        {/* Chat Area */}
+                        <div className={`flex-1 flex flex-col bg-white rounded-[2rem] border border-stone-100 shadow-2xl shadow-stone-200/50 overflow-hidden relative ${!activeChatId ? 'hidden md:flex' : 'flex'}`}>
+                            {activeChatId && activeChatId !== 'new' && chats[activeChatId] ? (
+                                <>
+                                    <div className="p-5 border-b border-stone-100 flex items-center gap-4 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+                                        <button onClick={() => setActiveChatId(null)} className="md:hidden p-2 -ml-2 text-stone-500 hover:bg-stone-100 rounded-full transition-colors">
+                                            <ArrowLeft size={20} />
+                                        </button>
+                                        <div>
+                                            <h3 className="font-bold text-stone-900 text-lg">{chats[activeChatId]?.title}</h3>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
+                                                <p className="text-xs text-stone-500 font-medium">ConnectiVita Assistant</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth custom-scrollbar bg-stone-50/30">
+                                        {chats[activeChatId].messages.map((m, i) => (
+                                            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`px-6 py-4 rounded-3xl max-w-[85%] text-[15px] leading-relaxed shadow-sm ${m.role === 'user' ? 'bg-stone-900 text-white rounded-br-none' : 'bg-white border border-stone-100 text-stone-800 rounded-bl-none shadow-stone-100'}`}>
+                                                    {m.content}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {isChatLoading && (
+                                            <div className="flex justify-start">
+                                                <div className="bg-white px-5 py-4 rounded-3xl rounded-bl-none border border-stone-100 flex gap-1.5 shadow-sm">
+                                                    <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce"></span>
+                                                    <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce delay-100"></span>
+                                                    <span className="w-2 h-2 bg-stone-400 rounded-full animate-bounce delay-200"></span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="h-4"></div>
+                                    </div>
+
+                                    <div className="p-4 bg-white border-t border-stone-100">
+                                        <div className="flex gap-2 relative bg-stone-50 p-2 rounded-[1.5rem] border border-stone-200 focus-within:ring-2 focus-within:ring-stone-900/10 focus-within:border-stone-400 transition-all">
+                                            <input
+                                                className="flex-1 bg-transparent border-none px-4 py-3 text-sm font-medium focus:outline-none focus:ring-0 placeholder:text-stone-400"
+                                                value={chatInput}
+                                                onChange={e => setChatInput(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                                        e.preventDefault();
+                                                        handleSendMessage();
+                                                    }
+                                                }}
+                                                placeholder={t.chat?.placeholder || "Ask a question..."}
+                                                disabled={isChatLoading}
+                                            />
+                                            <button
+                                                onClick={() => handleSendMessage()}
+                                                disabled={!chatInput.trim() || isChatLoading}
+                                                className="bg-stone-900 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:shadow-none transition-all"
+                                            >
+                                                <Send size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center text-stone-400 p-10 text-center relative">
+                                    {activeChatId === 'new' && (
+                                        <button onClick={() => setActiveChatId(null)} className="md:hidden absolute top-4 left-4 p-2 text-stone-500">
+                                            <ArrowLeft size={20} />
+                                        </button>
+                                    )}
+                                    <Sparkles size={48} className="mb-4 text-teal-100" />
+                                    <h3 className="text-stone-800 font-bold mb-2">How can I help you?</h3>
+                                    <p className="text-sm max-w-xs mb-6">I can help you understand schemes, guide you through life changes, or just answer questions for your family.</p>
+
+                                    {activeChatId === 'new' ? (
+                                        <div className="w-full max-w-lg flex gap-2 animate-in fade-in slide-in-from-bottom-4 bg-stone-50 p-2 rounded-[1.5rem] border border-stone-200 focus-within:ring-2 focus-within:ring-stone-900/10 transition-all">
+                                            <input
+                                                autoFocus
+                                                className="flex-1 bg-transparent border-none px-4 py-3 text-sm font-medium focus:outline-none placeholder:text-stone-400"
+                                                value={chatInput}
+                                                onChange={e => setChatInput(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                                        e.preventDefault();
+                                                        handleSendMessage();
+                                                    }
+                                                }}
+                                                placeholder="Ask anything..."
+                                                disabled={isChatLoading}
+                                            />
+                                            <button
+                                                onClick={() => handleSendMessage()}
+                                                disabled={!chatInput.trim() || isChatLoading}
+                                                className="bg-stone-900 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-all"
+                                            >
+                                                <Send size={20} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button onClick={() => setActiveChatId('new')} className="text-teal-600 font-bold text-sm hover:underline">Start a new chat</button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <button onClick={() => { setLifeState(null); setCurrentStepId('welcome'); }} className="w-full py-4 bg-stone-100 font-bold rounded-xl text-stone-600">Edit Family Details</button>
-                </div>
-            )}
+                )
+            }
 
-            {currentView === 'SETTINGS' && (
-                <div className="max-w-xl w-full mx-auto p-5 space-y-8 animate-in fade-in">
-                    <h1 className="text-2xl font-bold text-stone-800">Settings</h1>
-
-                    {/* Section 1: Data & Control */}
-                    <div className="space-y-4">
-                        <h2 className="text-xs font-bold text-stone-400 uppercase tracking-widest">Data & Control</h2>
-
-                        <div className="bg-white rounded-3xl border border-stone-200 overflow-hidden divide-y divide-stone-100">
-                            {/* Edit Snapshot */}
-                            <button
-                                onClick={() => { setLifeState(null); setCurrentStepId('welcome'); setStepHistory([]); setCurrentView('HOME'); }}
-                                className="w-full text-left p-4 hover:bg-stone-50 flex items-center justify-between group transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-teal-50 text-teal-600 rounded-lg group-hover:bg-teal-100 transition-colors">
-                                        <Edit2 size={18} />
-                                    </div>
-                                    <span className="font-medium text-stone-700">Edit Family Snapshot</span>
-                                </div>
-                                <ChevronRight size={16} className="text-stone-300 group-hover:text-stone-500" />
-                            </button>
-
-                            {/* Clear History */}
-                            <button
-                                onClick={handleClearHistory}
-                                className="w-full text-left p-4 hover:bg-stone-50 flex items-center justify-between group transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-orange-50 text-orange-600 rounded-lg group-hover:bg-orange-100 transition-colors">
-                                        <History size={18} />
-                                    </div>
-                                    <span className="font-medium text-stone-700">Clear Update History</span>
-                                </div>
-                                <ChevronRight size={16} className="text-stone-300 group-hover:text-stone-500" />
-                            </button>
-
-                            {/* Delete Account */}
-                            <button
-                                onClick={handleDeleteAccount}
-                                className="w-full text-left p-4 hover:bg-red-50 flex items-center justify-between group transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-red-50 text-red-600 rounded-lg group-hover:bg-red-100 transition-colors">
-                                        <Trash2 size={18} />
-                                    </div>
-                                    <span className="font-medium text-red-600">Delete Account</span>
-                                </div>
-                                <ChevronRight size={16} className="text-red-200 group-hover:text-red-400" />
-                            </button>
+            {
+                currentView === 'PROFILE' && (
+                    <div className="max-w-xl w-full mx-auto p-5 space-y-6 pb-32">
+                        <h1 className="text-2xl font-bold">Profile</h1>
+                        <div className="bg-white p-6 rounded-3xl border border-stone-200 space-y-4">
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-stone-500">Username</span>
+                                <span className="font-bold">{profile.username}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-stone-500">Gender</span>
+                                <span className="font-bold">{profile.primaryUser.gender}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-stone-500">Occupation</span>
+                                <span className="font-bold">{profile.primaryUser.occupationType}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-stone-500">State</span>
+                                <span className="font-bold">{profile.primaryUser.state}</span>
+                            </div>
                         </div>
+                        <button onClick={() => setCurrentView('EDIT_FAMILY')} className="w-full py-4 bg-stone-100 font-bold rounded-xl text-stone-600 hover:bg-stone-200 transition-colors">Edit Family Details</button>
                     </div>
+                )
+            }
 
-                    {/* Section 2: About Guidance */}
-                    <div className="space-y-4">
-                        <h2 className="text-xs font-bold text-stone-400 uppercase tracking-widest">About Guidance</h2>
-                        <div className="bg-stone-100 p-6 rounded-3xl border border-stone-200 text-stone-600 text-sm leading-relaxed">
-                            <div className="flex items-start gap-3">
-                                <Info size={20} className="text-stone-400 shrink-0 mt-0.5" />
-                                <p>Guidance is based on what you share. You can update or delete it anytime.</p>
+            {
+                currentView === 'SETTINGS' && (
+                    <div className="max-w-xl w-full mx-auto p-5 space-y-8 animate-in fade-in pb-32">
+                        <h1 className="text-2xl font-bold text-stone-800">Settings</h1>
+
+                        {/* Section 1: Data & Control */}
+                        <div className="space-y-4">
+                            <h2 className="text-xs font-bold text-stone-400 uppercase tracking-widest">Data & Control</h2>
+
+                            <div className="bg-white rounded-3xl border border-stone-200 overflow-hidden divide-y divide-stone-100">
+                                {/* Edit Snapshot */}
+                                <button
+                                    onClick={() => setCurrentView('EDIT_FAMILY')}
+                                    className="w-full text-left p-4 hover:bg-stone-50 flex items-center justify-between group transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-teal-50 text-teal-600 rounded-lg group-hover:bg-teal-100 transition-colors">
+                                            <Edit2 size={18} />
+                                        </div>
+                                        <span className="font-medium text-stone-700">Edit Family Snapshot</span>
+                                    </div>
+                                    <ChevronRight size={16} className="text-stone-300 group-hover:text-stone-500" />
+                                </button>
+
+                                {/* Clear History */}
+                                <button
+                                    onClick={handleClearHistory}
+                                    className="w-full text-left p-4 hover:bg-stone-50 flex items-center justify-between group transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-orange-50 text-orange-600 rounded-lg group-hover:bg-orange-100 transition-colors">
+                                            <History size={18} />
+                                        </div>
+                                        <span className="font-medium text-stone-700">Clear Update History</span>
+                                    </div>
+                                    <ChevronRight size={16} className="text-stone-300 group-hover:text-stone-500" />
+                                </button>
+
+                                {/* Delete Account */}
+                                <button
+                                    onClick={handleDeleteAccount}
+                                    className="w-full text-left p-4 hover:bg-red-50 flex items-center justify-between group transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-red-50 text-red-600 rounded-lg group-hover:bg-red-100 transition-colors">
+                                            <Trash2 size={18} />
+                                        </div>
+                                        <span className="font-medium text-red-600">Delete Account</span>
+                                    </div>
+                                    <ChevronRight size={16} className="text-red-200 group-hover:text-red-400" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Section 2: About Guidance */}
+                        <div className="space-y-4">
+                            <h2 className="text-xs font-bold text-stone-400 uppercase tracking-widest">About Guidance</h2>
+                            <div className="bg-stone-100 p-6 rounded-3xl border border-stone-200 text-stone-600 text-sm leading-relaxed">
+                                <div className="flex items-start gap-3">
+                                    <Info size={20} className="text-stone-400 shrink-0 mt-0.5" />
+                                    <p>Guidance is based on what you share. You can update or delete it anytime.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 p-2 flex justify-around">
+            {
+                currentView === 'EDIT_FAMILY' && (
+                    <div className="max-w-3xl w-full mx-auto p-5 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-8 sticky top-0 bg-white/80 backdrop-blur-md py-4 z-30 -mx-5 px-5 border-b border-stone-100">
+                            <button
+                                onClick={() => setCurrentView('SETTINGS')}
+                                className="flex items-center gap-2 text-stone-600 hover:text-stone-900 font-bold transition-colors"
+                            >
+                                <ArrowLeft size={20} />
+                                <span>Settings</span>
+                            </button>
+                            <h1 className="text-xl font-bold text-stone-800">Family Details</h1>
+                            <button
+                                onClick={() => {
+                                    const text = `Family Snapshot - ${new Date().toLocaleDateString()}\n\n` +
+                                        `Primary User: ${profile.primaryUser.name || 'Citizen'} (${profile.primaryUser.age} | ${profile.primaryUser.occupationType})\n` +
+                                        (profile.spouse ? `Spouse: ${profile.spouse.age} | ${profile.spouse.occupationType}\n` : '') +
+                                        (profile.children?.length ? `Children: ${profile.children.length}\n` : '') +
+                                        (profile.parents?.length ? `Parents: ${profile.parents.length}\n` : '');
+
+                                    const element = document.createElement("a");
+                                    const file = new Blob([text], { type: 'text/plain' });
+                                    element.href = URL.createObjectURL(file);
+                                    element.download = "ConnectiVita_Family_Details.txt";
+                                    document.body.appendChild(element);
+                                    element.click();
+                                }}
+                                className="p-2 text-stone-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition-all"
+                                title="Download Summary"
+                            >
+                                <Download size={20} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-8">
+                            {/* Primary User */}
+                            <section>
+                                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">You</h3>
+                                <div className="bg-white p-5 rounded-3xl border border-stone-200 shadow-sm flex justify-between items-center group hover:border-teal-200 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center text-stone-500">
+                                            <UserIcon size={24} />
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-stone-900 text-lg">Primary Member</div>
+                                            <div className="text-sm text-stone-500 flex gap-2">
+                                                <span>{profile.primaryUser.age} yrs</span> •
+                                                <span>{profile.primaryUser.gender || 'Not specified'}</span>
+                                            </div>
+                                            <div className="text-xs text-stone-400 mt-1">{profile.primaryUser.occupationType || 'No occupation listed'}</div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => { setEditingMember({ section: 'primaryUser', index: 0 }); setTempMemberData({ ...profile.primaryUser }); }}
+                                        className="p-3 rounded-xl bg-stone-50 text-stone-400 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                                    >
+                                        <Edit2 size={18} />
+                                    </button>
+                                </div>
+                            </section>
+
+                            {/* Spouse */}
+                            {profile.spouse && (
+                                <section>
+                                    <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">Spouse</h3>
+                                    <div className="bg-white p-5 rounded-3xl border border-stone-200 shadow-sm flex justify-between items-center group hover:border-teal-200 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center text-rose-500">
+                                                <Heart size={24} />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-stone-900 text-lg">Spouse</div>
+                                                <div className="text-sm text-stone-500 flex gap-2">
+                                                    <span>{profile.spouse.age} yrs</span>
+                                                </div>
+                                                <div className="text-xs text-stone-400 mt-1">{profile.spouse.occupationType || 'No occupation listed'}</div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => { setEditingMember({ section: 'spouse', index: 0 }); setTempMemberData({ ...profile.spouse }); }}
+                                            className="p-3 rounded-xl bg-stone-50 text-stone-400 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                                        >
+                                            <Edit2 size={18} />
+                                        </button>
+                                    </div>
+                                </section>
+                            )}
+
+                            {/* Children */}
+                            {profile.children && profile.children.length > 0 && (
+                                <section>
+                                    <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">Children</h3>
+                                    <div className="space-y-4">
+                                        {profile.children.map((child, idx) => (
+                                            <div key={idx} className="bg-white p-5 rounded-3xl border border-stone-200 shadow-sm flex justify-between items-center group hover:border-teal-200 transition-all">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500">
+                                                        <Baby size={24} />
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-stone-900 text-lg">{child.role || 'Child'} {idx + 1}</div>
+                                                        <div className="text-sm text-stone-500 flex gap-2">
+                                                            <span>{child.age} yrs</span> •
+                                                            <span>{child.gender}</span>
+                                                        </div>
+                                                        <div className="text-xs text-stone-400 mt-1">{child.studentLevel || child.occupationType || 'No status'}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => { setEditingMember({ section: 'children', index: idx }); setTempMemberData({ ...child }); }}
+                                                    className="p-3 rounded-xl bg-stone-50 text-stone-400 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                                                >
+                                                    <Edit2 size={18} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
+                            {/* Parents */}
+                            {profile.parents && profile.parents.length > 0 && (
+                                <section>
+                                    <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-4">Parents</h3>
+                                    <div className="space-y-4">
+                                        {profile.parents.map((p, idx) => (
+                                            <div key={idx} className="bg-white p-5 rounded-3xl border border-stone-200 shadow-sm flex justify-between items-center group hover:border-teal-200 transition-all">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
+                                                        <Users size={24} />
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-stone-900 text-lg">{p.role || 'Parent'}</div>
+                                                        <div className="text-sm text-stone-500 flex gap-2">
+                                                            <span>{p.age} yrs</span>
+                                                        </div>
+                                                        <div className="text-xs text-stone-400 mt-1">{p.occupationType || 'No occupation listed'}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => { setEditingMember({ section: 'parents', index: idx }); setTempMemberData({ ...p }); }}
+                                                    className="p-3 rounded-xl bg-stone-50 text-stone-400 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                                                >
+                                                    <Edit2 size={18} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
+                        </div>
+
+                        {/* EDIT MODAL */}
+                        {editingMember && (
+                            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+                                <div className="bg-white w-full max-w-lg rounded-[2rem] p-6 shadow-2xl animate-in slide-in-from-bottom-10 space-y-6">
+                                    <div className="flex justify-between items-center border-b border-stone-100 pb-4">
+                                        <h3 className="text-xl font-bold text-stone-800">Edit Details</h3>
+                                        <button onClick={() => setEditingMember(null)} className="p-2 bg-stone-50 rounded-full text-stone-500 hover:bg-stone-100"><X size={20} /></button>
+                                    </div>
+
+                                    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-stone-200">
+                                        {/* BASIC INFO */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Age</label>
+                                                <input
+                                                    type="number"
+                                                    value={tempMemberData.age || ''}
+                                                    onChange={e => setTempMemberData({ ...tempMemberData, age: e.target.value })}
+                                                    className="w-full bg-stone-50 border-0 rounded-xl p-3 font-bold text-stone-800 focus:ring-2 focus:ring-teal-500 transition-all"
+                                                    placeholder="Age"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Gender</label>
+                                                <select
+                                                    value={tempMemberData.gender || ''}
+                                                    onChange={e => setTempMemberData({ ...tempMemberData, gender: e.target.value })}
+                                                    className="w-full bg-stone-50 border-0 rounded-xl p-3 font-bold text-stone-800 focus:ring-2 focus:ring-teal-500 transition-all"
+                                                >
+                                                    <option value="">Select</option>
+                                                    <option value="Male">Male</option>
+                                                    <option value="Female">Female</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* MARITAL STATUS */}
+                                        {/* Show for adults usually, or based on age > 18 if age logic existed, simply showing for all for now or primary/spouse/parents */}
+                                        {editingMember.section !== 'children' && (
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Marital Status</label>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {['Unmarried', 'Married', 'Widowed', 'Divorced'].map(status => (
+                                                        <button
+                                                            key={status}
+                                                            onClick={() => setTempMemberData({ ...tempMemberData, maritalStatus: status })}
+                                                            className={`p-2 rounded-xl text-xs font-bold border-2 transition-all ${tempMemberData.maritalStatus === status ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-stone-100 text-stone-500 hover:border-stone-200'}`}
+                                                        >
+                                                            {status}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* PREGNANCY LOGIC - Only if Female and appropriate status */}
+                                        {tempMemberData.gender === 'Female' &&
+                                            (tempMemberData.maritalStatus === 'Married' || editingMember.section === 'primaryUser' || editingMember.section === 'spouse') && (
+                                                <div className="space-y-2 bg-rose-50 p-4 rounded-xl border border-rose-100">
+                                                    <label className="text-xs font-bold text-rose-400 uppercase tracking-widest flex items-center gap-2">
+                                                        <Baby size={14} /> Pregnancy Status
+                                                    </label>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm font-bold text-rose-700">Is currently pregnant?</span>
+                                                        <div className="flex bg-white rounded-lg p-1 border border-rose-100">
+                                                            <button
+                                                                onClick={() => setTempMemberData({ ...tempMemberData, isPregnant: false })}
+                                                                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${!tempMemberData.isPregnant ? 'bg-rose-100 text-rose-700' : 'text-stone-400'}`}
+                                                            >
+                                                                No
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setTempMemberData({ ...tempMemberData, isPregnant: true })}
+                                                                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${tempMemberData.isPregnant ? 'bg-rose-500 text-white shadow-md' : 'text-stone-400'}`}
+                                                            >
+                                                                Yes
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                        <div className="h-px bg-stone-100 my-2"></div>
+
+                                        {/* OCCUPATION LOGIC */}
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Occupation Type</label>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {['Student', 'Working', 'Homemaker', 'Retired', 'Unemployed', 'Other'].map(opt => (
+                                                        <button
+                                                            key={opt}
+                                                            onClick={() => {
+                                                                // Reset dependent fields when type changes
+                                                                const newData = { ...tempMemberData, occupationType: opt as any };
+                                                                if (opt !== 'Working') { delete newData.occupationSector; delete newData.incomeRange; }
+                                                                if (opt !== 'Student') { delete newData.studentLevel; }
+                                                                setTempMemberData(newData);
+                                                            }}
+                                                            className={`p-2 rounded-xl text-xs font-bold border-2 transition-all ${tempMemberData.occupationType === opt ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-stone-100 text-stone-500 hover:border-stone-200'}`}
+                                                        >
+                                                            {opt}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* CONDITIONAL: STUDENT -> What are they studying? */}
+                                            {tempMemberData.occupationType === 'Student' && (
+                                                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                                    <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Current Education Level</label>
+                                                    <select
+                                                        value={tempMemberData.studentLevel || ''}
+                                                        onChange={e => setTempMemberData({ ...tempMemberData, studentLevel: e.target.value })}
+                                                        className="w-full bg-indigo-50 border-indigo-100 rounded-xl p-3 font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500"
+                                                    >
+                                                        <option value="">Select Level</option>
+                                                        <option value="Primary School">Primary School (1-5)</option>
+                                                        <option value="Middle School">Middle School (6-8)</option>
+                                                        <option value="High School">High School (9-12)</option>
+                                                        <option value="College/University">College / University</option>
+                                                        <option value="Vocational">Vocational Training</option>
+                                                        <option value="Other">Other</option>
+                                                    </select>
+                                                </div>
+                                            )}
+
+                                            {/* CONDITIONAL: WORKING -> Sector & Income */}
+                                            {tempMemberData.occupationType === 'Working' && (
+                                                <div className="bg-stone-50 p-4 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Employment Sector</label>
+                                                        <select
+                                                            value={tempMemberData.occupationSector || ''}
+                                                            onChange={e => {
+                                                                const newSector = e.target.value;
+                                                                const newData = { ...tempMemberData, occupationSector: newSector };
+                                                                // Reset govt role if not govt
+                                                                if (newSector !== 'Government') delete newData.govtRole;
+                                                                setTempMemberData(newData);
+                                                            }}
+                                                            className="w-full bg-white border border-stone-200 rounded-xl p-3 font-bold text-stone-800 focus:ring-2 focus:ring-teal-500"
+                                                        >
+                                                            <option value="">Select Sector</option>
+                                                            <option value="Private">Private Sector</option>
+                                                            <option value="Government">Government / Public Sector</option>
+                                                            <option value="Business">Self-Employed / Business</option>
+                                                            <option value="Daily Wage">Daily Wage / Labor</option>
+                                                            <option value="Agriculture">Agriculture / Farming</option>
+                                                        </select>
+                                                    </div>
+
+                                                    {/* CONDITIONAL: GOVT -> Role Category */}
+                                                    {tempMemberData.occupationSector === 'Government' && (
+                                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                                            <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Government Job Category</label>
+                                                            <select
+                                                                value={tempMemberData.govtRole || ''}
+                                                                onChange={e => setTempMemberData({ ...tempMemberData, govtRole: e.target.value })}
+                                                                className="w-full bg-teal-50 border-teal-100 rounded-xl p-3 font-bold text-teal-900 focus:ring-2 focus:ring-teal-500"
+                                                            >
+                                                                <option value="">Select Category</option>
+                                                                <option value="Group A">Group A (Gazetted)</option>
+                                                                <option value="Group B">Group B</option>
+                                                                <option value="Group C">Group C</option>
+                                                                <option value="Group D">Group D</option>
+                                                                <option value="Contractual">Contractual Staff</option>
+                                                            </select>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Monthly Income Range</label>
+                                                        <select
+                                                            value={tempMemberData.incomeRange || ''}
+                                                            onChange={e => setTempMemberData({ ...tempMemberData, incomeRange: e.target.value })}
+                                                            className="w-full bg-white border border-stone-200 rounded-xl p-3 font-bold text-stone-800 focus:ring-2 focus:ring-teal-500"
+                                                        >
+                                                            <option value="">Select Range</option>
+                                                            <option value="< 5,000">Less than ₹5,000</option>
+                                                            <option value="5,000 - 10,000">₹5,000 - ₹10,000</option>
+                                                            <option value="10,000 - 20,000">₹10,000 - ₹20,000</option>
+                                                            <option value="20,000 - 50,000">₹20,000 - ₹50,000</option>
+                                                            <option value="> 50,000">More than ₹50,000</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="h-px bg-stone-100 my-2"></div>
+
+                                        {/* DISABILITY */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-stone-400 uppercase tracking-widest ml-1">Disability Status</label>
+                                            <div className="p-4 rounded-xl bg-stone-50 flex items-center justify-between">
+                                                <span className="text-sm font-bold text-stone-600">Has any disability?</span>
+                                                <div className="flex bg-white rounded-lg p-1 border border-stone-200">
+                                                    <button onClick={() => setTempMemberData({ ...tempMemberData, disability: 'No' })} className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${tempMemberData.disability !== 'Yes' ? 'bg-stone-800 text-white shadow-md' : 'text-stone-400 hover:bg-stone-50'}`}>No</button>
+                                                    <button onClick={() => setTempMemberData({ ...tempMemberData, disability: 'Yes' })} className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${tempMemberData.disability === 'Yes' ? 'bg-teal-500 text-white shadow-md' : 'text-stone-400 hover:bg-stone-50'}`}>Yes</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="pt-2">
+                                        <button
+                                            onClick={() => {
+                                                setProfile(prev => {
+                                                    const newP = { ...prev };
+                                                    const { section, index } = editingMember;
+                                                    if (section === 'primaryUser') newP.primaryUser = { ...newP.primaryUser, ...tempMemberData };
+                                                    else if (section === 'spouse') newP.spouse = { ...newP.spouse, ...tempMemberData };
+                                                    else if (section === 'children' && newP.children) newP.children[index] = { ...newP.children[index], ...tempMemberData };
+                                                    else if (section === 'parents' && newP.parents) newP.parents[index] = { ...newP.parents[index], ...tempMemberData };
+                                                    return newP;
+                                                });
+                                                setEditingMember(null);
+                                            }}
+                                            className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-black hover:scale-[1.02] active:scale-95 transition-all"
+                                        >
+                                            Save Changes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )
+            }
+
+            {/* TRENDY FLOATING DOCK NAV for All Screens */}
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-stone-900/90 backdrop-blur-lg p-2 rounded-full shadow-2xl flex items-center gap-2 z-50 ring-1 ring-white/10 scale-90 md:scale-100 origin-bottom">
                 {['HOME', 'SCHEMES', 'CHAT'].map((v: any) => (
-                    <button key={v} onClick={() => setCurrentView(v)} className={`p-2 ${currentView === v ? 'text-teal-600' : 'text-stone-400'}`}>
-                        {v === 'HOME' && <Home size={24} />}
-                        {v === 'SCHEMES' && <FileText size={24} />}
-                        {v === 'CHAT' && <MessageCircle size={24} />}
-                        {v === 'PROFILE' && <UserIcon size={24} />}
+                    <button
+                        key={v}
+                        onClick={() => setCurrentView(v)}
+                        className={`relative rounded-full w-14 h-14 flex items-center justify-center transition-all duration-300 ${currentView === v ? 'bg-white/20 text-white shadow-inner scale-100' : 'text-stone-400 hover:text-white hover:bg-white/10 hover:scale-105'}`}
+                    >
+                        {v === 'HOME' && <Home size={24} strokeWidth={2.5} />}
+                        {v === 'SCHEMES' && <FileText size={24} strokeWidth={2.5} />}
+                        {v === 'CHAT' && <MessageCircle size={24} strokeWidth={2.5} />}
+
+                        {/* Active Dot */}
+                        {currentView === v && <div className="absolute -bottom-1 w-1 h-1 bg-white rounded-full"></div>}
                     </button>
                 ))}
+
+
             </div>
-        </div>
+        </div >
     );
 };

@@ -30,15 +30,7 @@ export const LifeStageTimeline: React.FC<Props & { onViewJourney: () => void }> 
                     <ShieldCheck size={14} className="text-teal-600" />
                     {t.dataSecure || "Your family information is securely stored"}
                 </div>
-                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${getConfidenceColor()}`}>
-                    {t.guidanceConfidence || "Guidance Confidence"}: {confidence}
-                    <div className="group relative">
-                        <HelpCircle size={12} className="cursor-help opacity-60 hover:opacity-100" />
-                        <div className="absolute right-0 top-6 w-56 bg-stone-800 text-white text-[11px] p-3 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none normal-case font-normal leading-relaxed shadow-xl">
-                            {t.tooltipConfidence || "This reflects how complete your shared information is. You can update details anytime."}
-                        </div>
-                    </div>
-                </div>
+
             </div>
 
             <div className="p-6 relative">
