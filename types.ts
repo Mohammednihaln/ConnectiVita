@@ -1,5 +1,5 @@
 
-export type AppLanguage = 'English' | 'Hindi' | 'Marathi' | 'Tamil' | 'Bengali';
+export type AppLanguage = 'English' | 'Hindi' | 'Marathi' | 'Tamil' | 'Bengali' | 'Telugu' | 'Kannada' | 'Malayalam';
 
 export enum RiskLevel {
   HIGH = 'High',
@@ -32,6 +32,9 @@ export interface FamilyMember {
   isAlive?: boolean;
   name?: string; // Optional identifier
   role?: string; // 'Father', 'Mother'
+  studentGrade?: string; // If school
+  studentCourse?: string; // If college
+  studentYear?: string; // If college
   [key: string]: any;
 }
 
@@ -51,7 +54,7 @@ export interface CitizenProfile {
   parents?: FamilyMember[];
   siblings?: FamilyMember[];
   socialCategory?: string;
-  
+
   // Computed/Legacy fields
   state?: string;
   residenceType?: string;

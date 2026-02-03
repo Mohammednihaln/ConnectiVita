@@ -26,7 +26,7 @@ export const deepClean = (obj: any, seen = new WeakSet()): any => {
     if (obj instanceof Date) {
         return obj.toISOString();
     }
-    
+
     // 3. Handle DOM Nodes / Windows / Events (Common source of 'src' circular errors)
     if (typeof Node !== 'undefined' && obj instanceof Node) return '[DOM Node]';
     if (typeof Window !== 'undefined' && obj instanceof Window) return '[Window]';
@@ -47,7 +47,7 @@ export const deepClean = (obj: any, seen = new WeakSet()): any => {
     const cleaned: any = {};
     for (const key in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, key)) {
-             try {
+            try {
                 // Skip internal React keys or large irrelevant objects if found
                 if (key.startsWith('_') || key === 'nativeEvent') {
                     continue;
@@ -55,11 +55,11 @@ export const deepClean = (obj: any, seen = new WeakSet()): any => {
                 const val = obj[key];
                 // Skip functions as they don't stringify anyway but might have props
                 if (typeof val === 'function') continue;
-                
+
                 cleaned[key] = deepClean(val, seen);
-             } catch (e) {
+            } catch (e) {
                 cleaned[key] = '[Error Accessing Property]';
-             }
+            }
         }
     }
     return cleaned;
@@ -78,7 +78,7 @@ export const safeStringifyProfile = (profile: CitizenProfile) => {
             parents: profile.parents,
             siblings: profile.siblings,
             socialCategory: profile.socialCategory,
-            
+
             // Include derived/optional fields for full state restoration
             state: profile.state || profile.primaryUser?.state,
             residenceType: profile.residenceType,
@@ -147,12 +147,12 @@ export const detectProfileChanges = async (
 };
 
 export const analyzeLifeStageChange = async (
-  currentStage: string,
-  userInput: string,
-  language: AppLanguage
+    currentStage: string,
+    userInput: string,
+    language: AppLanguage
 ): Promise<LifeStageUpdate> => {
-  try {
-    const prompt = `
+    try {
+        const prompt = `
       You are ConnectiVita, a supportive life-stage intelligence engine.
       Current Context: The family is currently in the "${currentStage}" stage.
       User Update: "${userInput}"
@@ -190,29 +190,29 @@ export const analyzeLifeStageChange = async (
       ${getToneInstructions(language)}
     `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json"
-      }
-    });
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json"
+            }
+        });
 
-    const text = response.text;
-    if (!text) throw new Error("No response from AI");
-    
-    return JSON.parse(text) as LifeStageUpdate;
+        const text = response.text;
+        if (!text) throw new Error("No response from AI");
 
-  } catch (error) {
-    console.error("Gemini Analysis Error:", error);
-    return {
-      currentStage: currentStage,
-      nextStagePrediction: "Unknown",
-      immediateNeeds: ["Check back later"],
-      explanation: "We couldn't process that update automatically.",
-      journeySummary: "Profile updated."
-    };
-  }
+        return JSON.parse(text) as LifeStageUpdate;
+
+    } catch (error) {
+        console.error("Gemini Analysis Error:", error);
+        return {
+            currentStage: currentStage,
+            nextStagePrediction: "Unknown",
+            immediateNeeds: ["Check back later"],
+            explanation: "We couldn't process that update automatically.",
+            journeySummary: "Profile updated."
+        };
+    }
 };
 
 // Generates fallback schemes if AI returns empty or fails
@@ -291,7 +291,7 @@ const generateFallbackSchemes = (profile: CitizenProfile, language: AppLanguage)
 };
 
 export const getEligibleSchemes = async (
-    profile: CitizenProfile, 
+    profile: CitizenProfile,
     currentStage: string,
     language: AppLanguage
 ): Promise<SchemeAnalysisResult> => {
@@ -301,7 +301,7 @@ export const getEligibleSchemes = async (
             return {
                 status: 'missing_info',
                 missingField: 'state',
-                missingFieldQuestion: language === 'Hindi' 
+                missingFieldQuestion: language === 'Hindi'
                     ? "सहायता विकल्पों की जाँच करने के लिए, क्या आप बता सकते हैं कि आप किस राज्य में रहते हैं?"
                     : "To check for support options, could you share which State you live in?"
             };
@@ -412,7 +412,7 @@ export const getEligibleSchemes = async (
         // ABSOLUTE RENDER GUARANTEE:
         // If AI returns NO schemes, or very few, MERGE with deterministic fallbacks.
         const fallbackSchemes = generateFallbackSchemes(profile, language);
-        
+
         if (!result.schemes || result.schemes.length === 0) {
             result.schemes = fallbackSchemes;
             result.status = 'eligible';
@@ -432,9 +432,9 @@ export const getEligibleSchemes = async (
     } catch (e) {
         console.error("Scheme Check Error", e);
         // Fallback on error too
-        return { 
-            status: 'eligible', 
-            schemes: generateFallbackSchemes(profile, language) 
+        return {
+            status: 'eligible',
+            schemes: generateFallbackSchemes(profile, language)
         };
     }
 }
@@ -496,17 +496,17 @@ export const generateInitialSnapshot = async (profile: CitizenProfile, language:
                         focusAreas: {
                             type: Type.OBJECT,
                             properties: {
-                                health: { type: Type.OBJECT, properties: { title: {type: Type.STRING}, shortDescription: {type: Type.STRING}, whyItMatters: {type: Type.STRING} } },
-                                education: { type: Type.OBJECT, properties: { title: {type: Type.STRING}, shortDescription: {type: Type.STRING}, whyItMatters: {type: Type.STRING} } },
-                                livelihood: { type: Type.OBJECT, properties: { title: {type: Type.STRING}, shortDescription: {type: Type.STRING}, whyItMatters: {type: Type.STRING} } },
-                                support: { type: Type.OBJECT, properties: { title: {type: Type.STRING}, shortDescription: {type: Type.STRING}, whyItMatters: {type: Type.STRING} } }
+                                health: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, shortDescription: { type: Type.STRING }, whyItMatters: { type: Type.STRING } } },
+                                education: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, shortDescription: { type: Type.STRING }, whyItMatters: { type: Type.STRING } } },
+                                livelihood: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, shortDescription: { type: Type.STRING }, whyItMatters: { type: Type.STRING } } },
+                                support: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, shortDescription: { type: Type.STRING }, whyItMatters: { type: Type.STRING } } }
                             }
                         }
                     }
                 }
             }
         });
-        
+
         const text = response.text;
         if (!text) throw new Error("No response from AI");
         return JSON.parse(text) as LifeStageUpdate;
@@ -536,7 +536,7 @@ export const explainNeed = async (currentStage: string, need: string, language: 
             model: "gemini-3-flash-preview",
             contents: prompt
         });
-        
+
         return response.text || "This is helpful for your family.";
     } catch (e) {
         return "Loading...";
@@ -553,20 +553,20 @@ export const getFamilyContextChatResponse = async (
     updateHistory?: SnapshotUpdateEntry[]
 ): Promise<string> => {
     try {
-         const conversationHistory = history.map(msg => 
+        const conversationHistory = history.map(msg =>
             `${msg.role === 'user' ? 'User' : 'ConnectiVita'}: ${msg.content}`
-         ).join('\n');
+        ).join('\n');
 
-         const schemeContext = schemes && schemes.schemes && schemes.schemes.length > 0 
-            ? `KNOWN ELIGIBLE SCHEMES: ${JSON.stringify(deepClean(schemes.schemes))}` 
+        const schemeContext = schemes && schemes.schemes && schemes.schemes.length > 0
+            ? `KNOWN ELIGIBLE SCHEMES: ${JSON.stringify(deepClean(schemes.schemes))}`
             : "No specific schemes checked yet. Encourage user to visit Schemes tab.";
 
-         // Summarize recent updates
-         const recentUpdates = updateHistory && updateHistory.length > 0
+        // Summarize recent updates
+        const recentUpdates = updateHistory && updateHistory.length > 0
             ? updateHistory.slice(0, 3).map(u => `- ${u.date}: ${u.change_summary}`).join('\n')
             : "No recent updates recorded.";
 
-         const prompt = `
+        const prompt = `
             You are ConnectiVita, a warm, gentle, and supportive family assistant.
             
             CONTEXT:
@@ -584,15 +584,26 @@ export const getFamilyContextChatResponse = async (
             USER QUESTION: "${lastUserMessage}"
 
             GUIDELINES:
-            1. **Role**: You are a GUIDE, not an AUTHORITY.
-            2. **Tone**: Calm, respectful, reassuring, simple spoken language.
-            3. **Context-Aware**: Explicitly mention family members if relevant (e.g. "Since your mother is 62...").
-            4. **Schemes**: If schemes are in context, explain *why* they might be eligible. Use phrases like "Based on...", "You may be eligible for...". NEVER guarantee eligibility.
-            5. **Restrictions**: 
-               - DO NOT ask for documents.
-               - DO NOT give medical or legal advice.
-               - DO NOT promise specific outcomes.
-            6. **Output**: Respond ONLY in ${language}. Keep it concise.
+            1. **Role**: You are a gentle family guide.
+            2. **FORMATTING - STRICT**:
+               - NO markdown symbols. NO asterisks (*), NO dashes (-), NO bullets.
+               - Plain text paragraphs ONLY.
+               - Max 3 short paragraphs.
+               - Each paragraph max 2 sentences.
+            
+            3. **CONTENT - STRICT**:
+               - NO scheme names. NO "PMMVY", "Ayushman Bharat", etc.
+               - NO lists of benefits.
+               - NO advice, instructions, or pressure words ("should", "must").
+               - NO follow-up questions at the end.
+
+            4. **Focus Area Explanations**:
+               - If asking about a "focus area", explain why it matters based on the family profile.
+               - Paragraph 1: Calm opening on why this matters now.
+               - Paragraph 2: Relevance to the family situation.
+               - Paragraph 3: Optional warm closing about routine/balance.
+
+            5. **Output**: Respond ONLY in ${language}. Keep it natural, human, and symbol-free.
         `;
 
         const response = await ai.models.generateContent({
@@ -625,22 +636,22 @@ export const generateChatTitle = async (message: string, language: AppLanguage):
 }
 
 export const generateWorkerInsight = async (data: string): Promise<string> => {
-  try {
-      const prompt = `
+    try {
+        const prompt = `
           Analyze this household context for a community worker:
           "${data}"
           
           Task: Provide one short, actionable insight or precaution (max 1 sentence).
       `;
 
-      const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: prompt
-      });
-      
-      return response.text || "Monitor situation.";
-  } catch (e) {
-      console.error("Worker Insight Error", e);
-      return "Insight unavailable.";
-  }
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt
+        });
+
+        return response.text || "Monitor situation.";
+    } catch (e) {
+        console.error("Worker Insight Error", e);
+        return "Insight unavailable.";
+    }
 }
